@@ -1,0 +1,398 @@
+
+/* All rules are nested under html.lsu-dark so the popup toggle can switch them off */
+html.lsu-dark {
+
+  & {
+    --dm-bg:        #15131b;
+    --dm-surface:   #1e1b26;
+    --dm-surface-2: #282432;
+    --dm-border:    #3a3548;
+    --dm-text:      #e7e4ee;
+    --dm-muted:     #a8a2b8;
+    --dm-link:      #bfa8f5;   /* LSU purple, lifted for contrast */
+    --dm-link-hov:  #fdd023;   /* LSU gold */
+    --dm-primary:   #6d4fc4;
+    --dm-overlay:   rgba(21, 19, 27, 0.8);  /* translucent panels over photos */
+    color-scheme: dark;
+  }
+
+  /* AMOLED: true-black page (pixels off on OLED screens). Surfaces stay just above
+     black so cards remain distinguishable, and borders carry more of the structure. */
+  &.lsu-amoled {
+    --dm-bg:        #000000;
+    --dm-surface:   #0b0a0f;
+    --dm-surface-2: #16141c;
+    --dm-border:    #2c2836;
+    --dm-overlay:   rgba(0, 0, 0, 0.75);
+  }
+
+  /* ---------- Page base ---------- */
+  &, body, #page, #page-wrapper, #page-content, #region-main,
+  #region-main-box, .main-inner, #topofscroll, .pagelayout-frontpage #page {
+    background-color: var(--dm-bg) !important;
+    background-image: none !important; /* Snap puts a light gradient on body */
+    color: var(--dm-text) !important;
+  }
+
+  a { color: var(--dm-link) !important; }
+  a:hover { color: var(--dm-link-hov) !important; }
+
+  h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6,
+  .page-header-headings, .sectionname, .coursename, .instancename {
+    color: var(--dm-text) !important;
+  }
+
+  .text-muted, .dimmed_text, .dimmed, small, .small,
+  .activity-dates, .description, .summary .text-muted {
+    color: var(--dm-muted) !important;
+  }
+  /* ...but small text inside a status color (e.g. the green "Highlighted" label in
+     the course contents) keeps that color, as in light mode */
+  :is(.text-success, .text-danger, .text-warning, .text-info) :is(small, .small) {
+    color: inherit !important;
+  }
+
+  hr { border-color: var(--dm-border) !important; }
+
+  /* Kill every flavor of "white/light background" utility */
+  .bg-white, .bg-light, .bg-gray, [class*="bg-light"],
+  .jumbotron, .well {
+    background-color: var(--dm-surface) !important;
+    color: var(--dm-text) !important;
+  }
+
+  /* ---------- Top navbar ---------- */
+  /* No background override: LSU's custom-menu navbar is already LSU purple, and
+     any navbar that is white gets darkened by content.js */
+  .navbar .nav-link, .navbar a, .navbar .btn, .navbar .icon,
+  .usermenu .login, .popover-region-toggle .icon {
+    color: var(--dm-text) !important;
+  }
+  /* The purple LSU wordmark would vanish on dark — tint it light */
+  .navbar-brand img, .logo img, .navbar .logo {
+    filter: brightness(0) invert(0.9);
+  }
+
+  /* Secondary nav / tabs */
+  .secondary-navigation, .secondary-navigation .navigation,
+  .moremenu, .nav-tabs, .nav-pills {
+    background-color: var(--dm-bg) !important;
+    border-color: var(--dm-border) !important;
+  }
+  .moremenu .nav-link, .nav-tabs .nav-link {
+    color: var(--dm-muted) !important;
+    background: transparent !important;
+    border-color: transparent !important;
+  }
+  .moremenu .nav-link.active, .nav-tabs .nav-link.active,
+  .moremenu .nav-link:hover, .nav-tabs .nav-link:hover {
+    color: var(--dm-text) !important;
+    border-bottom-color: var(--dm-link-hov) !important;
+  }
+
+  /* ---------- Drawers (course index, blocks) ---------- */
+  .drawer, .drawer-left, .drawer-right, .drawerheader,
+  #theme_boost-drawers-courseindex, #theme_boost-drawers-blocks,
+  .courseindex, .courseindex-section, .courseindex-item,
+  [data-region="drawer"], #nav-drawer {
+    background-color: var(--dm-surface) !important;
+    color: var(--dm-text) !important;
+    border-color: var(--dm-border) !important;
+  }
+  .courseindex .courseindex-item.pageitem,
+  .courseindex .courseindex-item:hover {
+    background-color: var(--dm-surface-2) !important;
+  }
+  .drawer-toggler .btn, .drawer-toggles .btn {
+    background-color: var(--dm-surface-2) !important;
+    color: var(--dm-text) !important;
+  }
+
+  /* ---------- Cards, blocks, course content ---------- */
+  /* Real cards get the raised surface color... */
+  .card, .block, .activity-item, .dashboard-card, .coursebox,
+  .course-summary-item, .list-group-item, .timeline-event-list-item,
+  .modal-content, .popover, .popover-region-container,
+  .content-item-container, .notification, #page-header {
+    background-color: var(--dm-surface) !important;
+    color: var(--dm-text) !important;
+    border-color: var(--dm-border) !important;
+  }
+
+  /* ...but layout wrappers stay transparent. In light mode they are white-on-white
+     and invisible; painting them would add boxes that aren't really there. */
+  .card-body, .card-header, .card-footer, .card-text,
+  .block .content, .course-content, .course-section, .section,
+  .activity-wrapper, .activityinstance, .course-info-container,
+  .page-context-header, .box, .generalbox,
+  .frontpage-course-list-enrolled, .frontpage-course-list-all,
+  #frontpage-available-course-list, .event-name-container,
+  .modal-header, .modal-body, .modal-footer, .popover-body, .popover-header,
+  .popover-region-content-container, .popover-region-header-container,
+  .popover-region-footer-container, .settingsform, .mform fieldset {
+    background-color: transparent !important;
+    color: var(--dm-text) !important;
+    border-color: var(--dm-border) !important;
+  }
+
+  .activity-item:hover, .list-group-item-action:hover,
+  .course-summary-item:hover {
+    background-color: var(--dm-surface-2) !important;
+  }
+
+  .activity-item .activity-altcontent, .activity-description,
+  .no-overflow, .contentwithoutlink, .summarytext {
+    color: var(--dm-text) !important;
+  }
+
+  /* Completion / status badges */
+  .badge-light, .badge-secondary, .completion-info .btn,
+  .automatic-completion-conditions .badge {
+    background-color: var(--dm-surface-2) !important;
+    color: var(--dm-text) !important;
+  }
+
+  /* ---------- Dropdowns ---------- */
+  .dropdown-menu {
+    background-color: var(--dm-surface-2) !important;
+    border-color: var(--dm-border) !important;
+  }
+  .dropdown-item, .dropdown-header { color: var(--dm-text) !important; }
+  .dropdown-item:hover, .dropdown-item:focus, .dropdown-item.active {
+    background-color: var(--dm-primary) !important;
+    color: #fff !important;
+  }
+  .dropdown-divider { border-color: var(--dm-border) !important; }
+
+  /* ---------- Forms & buttons ---------- */
+  .form-control, .custom-select, select, input, textarea,
+  .form-autocomplete-selection, .form-autocomplete-suggestions,
+  .input-group-text {
+    background-color: var(--dm-surface-2) !important;
+    color: var(--dm-text) !important;
+    border-color: var(--dm-border) !important;
+  }
+  .form-control::placeholder, input::placeholder { color: var(--dm-muted) !important; }
+
+  .btn-secondary, .btn-light, .btn-outline-secondary, .btn-default,
+  .btn-link.btn-icon, .btn-footer-popover {
+    background-color: var(--dm-surface-2) !important;
+    color: var(--dm-text) !important;
+    border-color: var(--dm-border) !important;
+  }
+  .btn-secondary:hover, .btn-light:hover, .btn-outline-secondary:hover {
+    background-color: var(--dm-border) !important;
+  }
+
+  /* ---------- Tables (gradebook etc.) ---------- */
+  table, .table, .generaltable, .gradereport-grader-table, .user-grade,
+  th, td, thead, tbody, tr {
+    background-color: var(--dm-surface) !important;
+    color: var(--dm-text) !important;
+    border-color: var(--dm-border) !important;
+  }
+  .table-striped tbody tr:nth-of-type(odd),
+  .generaltable tbody tr:nth-of-type(odd) {
+    background-color: var(--dm-surface-2) !important;
+  }
+  .table-hover tbody tr:hover, .generaltable tbody tr:hover td {
+    background-color: var(--dm-border) !important;
+  }
+
+  /* ---------- Messaging drawer ---------- */
+  .message-app, .message-app .header-container, .message-app .footer-container,
+  .message-app .body-container, .message-app .panel-header-container,
+  .message-app .list-group, .message-app .view-overview-body,
+  .message-app .message.received {
+    background-color: var(--dm-surface) !important;
+    color: var(--dm-text) !important;
+    border-color: var(--dm-border) !important;
+  }
+  .message-app .message.send {
+    background-color: var(--dm-primary) !important;
+    color: #fff !important;
+  }
+
+  /* ---------- Forums, quizzes, assignment ---------- */
+  .forumpost, .forum-post-container, .discussion-list,
+  .que .formulation, .que .outcome, .que .comment, .que .info,
+  .que .history, .submissionstatustable, .feedback,
+  .path-mod-quiz .othernav, #mod_quiz_navblock {
+    background-color: var(--dm-surface) !important;
+    color: var(--dm-text) !important;
+    border-color: var(--dm-border) !important;
+  }
+  .que .formulation { background-color: #1f2a3a !important; } /* soft blue tint kept */
+  .que .outcome, .que .comment { background-color: #2e2a1a !important; }
+
+  /* ---------- Rich text editors ---------- */
+  .editor_atto_content, .editor_atto_toolbar, .editor_atto_content_wrap,
+  .tox .tox-edit-area__iframe, .tox .tox-toolbar, .tox .tox-toolbar__primary,
+  .tox .tox-menubar, .tox .tox-statusbar, .tox-tinymce {
+    background-color: var(--dm-surface-2) !important;
+    color: var(--dm-text) !important;
+    border-color: var(--dm-border) !important;
+  }
+  .tox .tox-tbtn svg, .tox .tox-mbtn { fill: var(--dm-text) !important; color: var(--dm-text) !important; }
+
+  /* ---------- Calendar ---------- */
+  .calendarmonth td, .calendarmonth th, .maincalendar .calendar-controls,
+  .calendartable td.today .day-number-circle {
+    background-color: var(--dm-surface) !important;
+    color: var(--dm-text) !important;
+    border-color: var(--dm-border) !important;
+  }
+  .calendarmonth td.today { background-color: var(--dm-surface-2) !important; }
+
+  /* ---------- Footer ---------- */
+  #page-footer, footer, .footer-dark, .footer-popover, .footer-section {
+    background-color: var(--dm-surface) !important;
+    color: var(--dm-muted) !important;
+    border-color: var(--dm-border) !important;
+  }
+
+  /* ---------- Media ---------- */
+  /* Tone down the big hero banner so it isn't a flashbang */
+  .headerbkg, .frontpage-hero, #page-header .card-body[style*="background"],
+  .pagelayout-frontpage .page-header-image, [class*="hero"] {
+    filter: brightness(0.75);
+  }
+  /* (No blanket image filter: Snap recolors its own icon images with `filter`,
+     e.g. `.snap-sidebar-menu-item img { filter: brightness(0) invert(1) }`) */
+  .snap-sidebar-menu-item img { filter: brightness(0) invert(0.9) !important; }
+
+  /* Activity icons: Snap draws a glyph in the <img> and tints it with a `filter` on
+     the container (PDF = blue, URL = grayscale). Make every glyph white so the
+     container's tint still works, and drop the light icon tile. */
+  .activityiconcontainer { background-color: transparent !important; }
+  .activityiconcontainer img.activityicon { filter: brightness(0) invert(1) !important; }
+
+  /* Other icon images (completion circles, etc.): invert + hue-rotate keeps outlines
+     as outlines, turns white fills dark, and preserves hue (green checks stay green).
+     A brightness(0) silhouette would turn outlined circles into solid blobs. */
+  img.icon:not(.activityicon) { filter: invert(1) hue-rotate(180deg); }
+  .fa, .icon.fa { color: var(--dm-text) !important; }
+
+  /* Scrollbars */
+  * { scrollbar-color: var(--dm-border) var(--dm-bg); }
+
+  /* ================= Snap theme (what LSU actually runs) ================= */
+
+  /* Top header bar + logo (logo is a background-image on #snap-home) */
+  #mr-nav, #snap-header {
+    background-color: var(--dm-surface) !important;
+    border-bottom: 1px solid var(--dm-border) !important;
+  }
+  /* (Rules for elements flagged by content.js are generated by content.js itself) */
+
+  /* Recolor the logo to LSU gold #FDD023 */
+  #snap-home {
+    filter: brightness(0) saturate(100%) invert(64%) sepia(62%) saturate(2982%)
+            hue-rotate(348deg) brightness(155%) contrast(99%) !important;
+  }
+
+  /* Breadcrumb pill (white box with purple links) */
+  /* One pill (the <nav>), like light mode — nothing painted inside it */
+  .breadcrumb-nav {
+    background-color: var(--dm-surface-2) !important;
+  }
+  .breadcrumb, .breadcrumb-item {
+    background-color: transparent !important;
+    color: var(--dm-muted) !important;
+  }
+  .breadcrumb-item + .breadcrumb-item::before { color: var(--dm-muted) !important; }
+
+  /* Inner-page header: Snap paints a light grey gradient behind the title */
+  body:not(.pagelayout-frontpage):not(.pagelayout-course):not(.pagelayout-incourse) #page-header {
+    background: var(--dm-surface) !important;
+    border-bottom: 1px solid var(--dm-border) !important;
+  }
+
+  /* Front-page hero only: translucent white welcome box -> translucent dark.
+     On every other page #page-mast is just the title row and must stay clear,
+     or it shows up as a dark bar across the header. */
+  .pagelayout-frontpage #page-mast {
+    background-color: var(--dm-overlay) !important;
+  }
+  body:not(.pagelayout-frontpage) #page-mast { background-color: transparent !important; }
+  #page-mast, #page-mast h1, #page-mast h1 a, #page-mast p,
+  #page-mast .text-muted {
+    color: var(--dm-text) !important;
+  }
+  /* Dim the banner photo without dimming the text on top of it */
+  .pagelayout-frontpage #page-header { box-shadow: inset 0 0 0 100vmax rgba(0, 0, 0, 0.2); }
+
+  /* Keyboard focus: Snap paints a white box behind focused links; with light link
+     text that is unreadable. Use an LSU-gold focus ring instead. */
+  a:focus, a.focus, .aalink:focus, .aalink.focus, a.autolink:focus {
+    background-color: transparent !important;
+    color: var(--dm-link) !important;
+    outline: 2px solid var(--dm-link-hov) !important;
+    outline-offset: 2px;
+    border-radius: 3px;
+    box-shadow: none !important;
+  }
+
+  /* Course contents search: the magnifier is a ::before image *behind* the round
+     input, so the input must stay see-through; the icon itself is dark purple. */
+  #toc-search-input {
+    background-color: transparent !important;
+    border-color: transparent !important; /* light mode: just the magnifier, no ring */
+  }
+  #toc-search-input:focus { border-color: var(--dm-border) !important; }
+  #toc-search::before { filter: brightness(0) invert(0.85); }
+
+  /* "Highlighted" section tag: light-mode pastel green -> LSU gold accent */
+  .snap-current-tag {
+    background-color: rgba(253, 208, 35, 0.1) !important;
+    color: var(--dm-link-hov) !important;
+    border-left: 3px solid var(--dm-link-hov) !important;
+  }
+  .snap-current-tag img, .snap-current-tag .icon {
+    filter: brightness(0) saturate(100%) invert(64%) sepia(62%) saturate(2982%)
+            hue-rotate(348deg) brightness(155%) contrast(99%) !important;
+  }
+
+  /* Activity/label cards: the white frame is the <li>, not the inner box */
+  li.snap-resource, li.snap-asset, li.activity, .snap-activity,
+  .asset-wrapper, .snap-asset-content {
+    background-color: var(--dm-surface) !important;
+    color: var(--dm-text) !important;
+  }
+  .activityinstance { background-color: transparent !important; }
+
+  /* Section headings in Snap are grey #565656 */
+  .sectionname, h2.sectionname, .section-title {
+    color: var(--dm-text) !important;
+  }
+
+  /* LSU's purple icon PNGs vanish on dark — brighten them */
+  img.lsuicons { filter: brightness(2.2) saturate(0.9); }
+
+  /* Transparent diagrams (black lines) in course content need a light card */
+  .no-overflow img:not(.lsuicons):not(.icon):not(.userpicture) {
+    background-color: #eceaf2;
+    border-radius: 4px;
+  }
+
+  /* Course table of contents: in light mode it sits directly on the page with no
+     box of its own — keep it that way, or the text ends up flush against a card edge */
+  #course-toc, #chapters, #snap-course-tools {
+    background-color: transparent !important;
+  }
+
+  /* Personal menu (slide-out panel) */
+  #snap-pm, #snap-pm-content, .snap-pm-content,
+  #snap-pm-courses, #snap-pm-updates, #snap-pm-header,
+  .snap-sidebar-menu {
+    background-color: var(--dm-surface) !important;
+    color: var(--dm-text) !important;
+    border-color: var(--dm-border) !important;
+  }
+
+  /* Footer */
+  #moodle-footer, #snap-site-footer, #snap-footer-content {
+    background-color: var(--dm-surface) !important;
+    color: var(--dm-muted) !important;
+  }
+}

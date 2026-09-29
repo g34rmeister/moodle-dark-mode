@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "LSU Moodle Dark (Unofficial)",
+  "short_name": "Moodle Dark",
+  "version": "1.1.1",
+  "description": "Unofficial dark and AMOLED theme for LSU Moodle, with automatic contrast fixes. Not affiliated with LSU.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": ["https://moodle.lsu.edu/*"],
+      "css": ["dark.css"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_title": "LSU Moodle Dark",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
+  }
+}
