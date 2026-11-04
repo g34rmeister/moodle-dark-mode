@@ -18,6 +18,9 @@ manifest = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
 css = (ROOT / "dark.css").read_text(encoding="utf-8")
 content_js = (ROOT / "content.js").read_text(encoding="utf-8")
 
+REPO = "https://github.com/g34rmeister/moodle-dark-mode"
+RAW = "https://raw.githubusercontent.com/g34rmeister/moodle-dark-mode/main"
+
 HEADER = f"""// ==UserScript==
 // @name         {manifest["name"]}
 // @namespace    lsu-moodle-dark
@@ -25,6 +28,10 @@ HEADER = f"""// ==UserScript==
 // @description  {manifest["description"].rstrip(".")} (userscript build for mobile browsers)
 // @match        https://moodle.lsu.edu/*
 // @run-at       document-start
+// @homepageURL  {REPO}
+// @supportURL   {REPO}/issues
+// @updateURL    {RAW}/dist/lsu-moodle-dark.user.js
+// @downloadURL  {RAW}/dist/lsu-moodle-dark.user.js
 // @grant        GM_registerMenuCommand
 // @grant        GM.registerMenuCommand
 // ==/UserScript==
@@ -67,13 +74,23 @@ window.addEventListener("storage", (e) => {
 const style = document.createElement("style");
 style.id = "lsu-moodle-dark-css";
 style.textContent = __CSS__;
-(document.head || document.documentElement).appendChild(style);
+// At document-start some engines (WebKit/Safari) run us before <html> exists, and
+// in an editor iframe the page's document.open/write later replaces <html> along
+// with this <style>. So (re)attach it whenever it is missing. content.js does the
+// same for its classes (see handleMutations).
+const attachStyle = () => {
+  if (!style.isConnected && document.documentElement) (document.head || document.documentElement).appendChild(style);
+};
+attachStyle();
+new MutationObserver(attachStyle).observe(document, { childList: true });
 """
 
 TOGGLES = r"""
 // ---------- toggles (the extension uses its toolbar popup) ----------
-const settings = () => ({ enabled: true, amoled: false, ...readStore() });
-const toggleDark = () => chrome.storage.sync.set({ enabled: !settings().enabled });
+const settings = () => ({ ...DEFAULTS, ...readStore() }); // DEFAULTS: from content.js
+// Flips what you see right now (in Auto mode that also leaves Auto)
+const toggleDark = () => chrome.storage.sync.set({ enabled: !isDark(), auto: false });
+const toggleAuto = () => chrome.storage.sync.set({ auto: !settings().auto, enabled: true });
 const toggleAmoled = () => chrome.storage.sync.set({ amoled: !settings().amoled, enabled: true });
 const registerMenu =
   (typeof GM_registerMenuCommand === "function" && GM_registerMenuCommand) ||
@@ -82,6 +99,7 @@ if (window.top === window) {
   if (registerMenu) {
     registerMenu("Toggle dark mode", toggleDark);
     registerMenu("Toggle AMOLED black", toggleAmoled);
+    registerMenu("Toggle follow system (Auto)", toggleAuto);
   } else {
     // No menu API (e.g. iOS Userscripts): a small floating button.
     // Tap = dark on/off, long-press = AMOLED on/off.
@@ -125,19 +143,57 @@ out = (
 
 dist = ROOT / "dist"
 dist.mkdir(exist_ok=True)
-(dist / "lsu-moodle-dark.user.js").write_text(out, encoding="utf-8")
+# Always LF, so a build on Windows produces the same file as one on Linux/macOS
+(dist / "lsu-moodle-dark.user.js").write_text(out, encoding="utf-8", newline="\n")
 print(f"wrote dist/lsu-moodle-dark.user.js ({len(out) // 1024} KB, v{manifest['version']})")
 
-# ---------- Chrome Web Store package: only what the extension loads at runtime ----------
+# ---------- Browser packages: only what the extension loads at runtime ----------
+# One source manifest (manifest.json, which Chromium browsers load as-is for "Load
+# unpacked"), plus per-browser tweaks. Each target gets an unpacked folder under
+# dist/build/ (for local testing) and a zip for its store.
+import shutil
 import zipfile
 
-runtime = ["manifest.json", "dark.css", "content.js", "popup.html", "popup.js",
+runtime = ["dark.css", "content.js", "popup.html", "popup.js",
            *[f"icons/icon-{s}.png" for s in (16, 32, 48, 128)]]
 missing = [f for f in runtime if not (ROOT / f).exists()]
 if missing:
     raise SystemExit(f"missing files for the store package: {missing} (run make_icons.py?)")
-zip_path = dist / f"lsu-moodle-dark-{manifest['version']}.zip"
-with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+
+
+def firefox_manifest(m):
+    m = json.loads(json.dumps(m))  # deep copy
+    m["browser_specific_settings"] = {
+        "gecko": {
+            # Fixed forever once published: Firefox keys settings and updates on it
+            "id": "lsu-moodle-dark@g34rmeister.github.io",
+            # 140: first version with the data-consent key below, which
+            # addons.mozilla.org requires for new extensions (also the 140 ESR)
+            "strict_min_version": "140.0",
+            "data_collection_permissions": {"required": ["none"]},
+        },
+        "gecko_android": {"strict_min_version": "142.0"},
+    }
+    return m
+
+
+TARGETS = {
+    # Chrome, Edge, Brave, Opera, Vivaldi
+    "chrome": (manifest, "Chrome Web Store / Edge Add-ons / Opera add-ons"),
+    # Firefox desktop + Android
+    "firefox": (firefox_manifest(manifest), "addons.mozilla.org"),
+}
+
+for name, (m, store) in TARGETS.items():
+    unpacked = dist / "build" / name
+    shutil.rmtree(unpacked, ignore_errors=True)
+    unpacked.mkdir(parents=True)
+    (unpacked / "manifest.json").write_text(json.dumps(m, indent=2) + "\n", encoding="utf-8", newline="\n")
     for f in runtime:
-        z.write(ROOT / f, f)
-print(f"wrote dist/{zip_path.name} (upload this to the Chrome Web Store)")
+        (unpacked / f).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / f, unpacked / f)
+    zip_path = dist / f"lsu-moodle-dark-{manifest['version']}-{name}.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in ["manifest.json", *runtime]:
+            z.write(unpacked / f, f)
+    print(f"wrote dist/{zip_path.name} (upload to {store}; unpacked copy in dist/build/{name}/)")

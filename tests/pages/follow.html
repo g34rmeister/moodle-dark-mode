@@ -1,0 +1,14 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>follow</title>
+<style>.gold { background: #fdd023; } #t { color: #555; }</style></head>
+<body>
+<!-- Grey text gets fixed on dark, must get its own color back on a gold chip, and be fixed again after -->
+<div id="sec"><p id="t">grey text <b>x</b></p></div>
+<pre id="out"></pre>
+<script>
+const log = [], sec = document.getElementById("sec");
+const snap = () => log.push(getComputedStyle(document.getElementById("t")).color);
+setTimeout(() => { snap(); sec.classList.add("gold"); }, 800);
+setTimeout(() => { snap(); sec.classList.remove("gold"); }, 1300);
+setTimeout(() => { snap(); document.getElementById("out").textContent = "RESULT " + JSON.stringify({ textOnDark: log[0], textOnGold: log[1], textOnDarkAgain: log[2] }); }, 1800);
+</script></body></html>

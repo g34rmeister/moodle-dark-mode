@@ -1,0 +1,19 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>cache</title>
+<script>
+// Extension only. Runs right after the content script (document_start), so this is
+// the class the page first paints with. First visit: wait for the extension to
+// settle, then save a cached "off" and reload; the reload must start unthemed.
+const initial = document.documentElement.className;
+if (!sessionStorage.getItem("seeded")) {
+  sessionStorage.setItem("seeded", "1");
+  setTimeout(() => {
+    localStorage.setItem("lsu-moodle-dark-cache", JSON.stringify({ enabled: false, auto: false, amoled: false }));
+    location.reload();
+  }, 500);
+} else {
+  setTimeout(() => {
+    document.getElementById("out").textContent = "RESULT " + JSON.stringify({ firstPaintClass: initial, settledClass: document.documentElement.className });
+  }, 1000);
+}
+</script></head><body><pre id="out"></pre></body></html>

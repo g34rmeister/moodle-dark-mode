@@ -1,0 +1,24 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>card</title>
+<style>
+.dashboard-card-img { height: 160px; max-width: 460px; position: relative; background-image: url(/photo.svg); background-size: cover; }
+.cc_quick_link { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,.75); padding: 4px; }
+.cc_quick_link a { color: #461d7c; text-decoration: none; margin: 0 4px; }
+</style></head>
+<body>
+<!-- LSU course card quick links, markup as on moodle.lsu.edu (glyphs stand in for Font Awesome) -->
+<div class="card dashboard-card"><div class="card-img dashboard-card-img">
+<span class="cc_quick_link">
+ <a href="#" title="Moodle Mail"><i class="fa fa-envelope-o cc_quick_link_icon">M</i></a>
+ <a href="#" title="Grades"><i class="fa fa-table cc_quick_link_icon">G</i></a>
+</span></div><div class="card-body">Fellowships</div></div>
+<pre id="out"></pre>
+<script>
+setTimeout(() => {
+  const cs = (s) => getComputedStyle(document.querySelector(s));
+  document.getElementById("out").textContent = "RESULT " + JSON.stringify({
+    quickLinkChipBg: cs(".cc_quick_link").backgroundColor,
+    quickLinkIcon: cs(".cc_quick_link_icon").color,
+  });
+}, 1000);
+</script></body></html>

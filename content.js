@@ -1,6 +1,31 @@
-// Turn dark mode on immediately to avoid a white flash, then honor the saved setting.
-const root = document.documentElement;
-root.classList.add("lsu-dark");
+// Settings: `enabled` is the master switch; `auto` makes it follow the system's
+// light/dark preference; `amoled` picks the true-black palette.
+const DEFAULTS = { enabled: true, auto: false, amoled: false };
+
+// chrome.storage answers asynchronously, after the page has started to paint. To
+// avoid a flash of the wrong theme, start from a copy of the last settings kept in
+// the site's localStorage (read synchronously), then correct it if storage differs.
+const CACHE_KEY = "lsu-moodle-dark-cache";
+const state = { ...DEFAULTS };
+try { Object.assign(state, JSON.parse(localStorage.getItem(CACHE_KEY))); } catch {}
+function saveCache() {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(state)); } catch {}
+}
+
+const systemDark = matchMedia("(prefers-color-scheme: dark)");
+const isDark = () => state.enabled && (!state.auto || systemDark.matches);
+
+// The <html> element is looked up each time rather than kept: in TinyMCE's editor
+// iframe (Moodle 4.1+), the page rewrites the document with document.open/write after
+// we start, which replaces <html>. `state` is what gets re-applied to the new one.
+const html = () => document.documentElement;
+function syncRootClasses() {
+  const root = html();
+  if (!root) return;
+  root.classList.toggle("lsu-dark", isDark());
+  root.classList.toggle("lsu-amoled", state.amoled);
+}
+syncRootClasses();
 
 // dark.css handles the known parts of the page. This script is the safety net for
 // everything else. It reads each element's *computed* colors and:
@@ -69,16 +94,19 @@ function fixText(c, bg) {
 // ---------- Generated rules for elements without a style attribute ----------
 const sheet = document.createElement("style");
 const colorIds = new Map();
-function colorId({ r, g, b }) {
-  const key = `rgb(${r}, ${g}, ${b})`;
+const colorKeys = []; // id -> key, the reverse of colorIds
+const rgbKey = ({ r, g, b }) => `rgb(${r}, ${g}, ${b})`;
+function colorId(c) {
+  const key = rgbKey(c);
   if (!colorIds.has(key)) {
-    colorIds.set(key, colorIds.size);
-    sheet.textContent += `html.lsu-dark [data-dm-c="${colorIds.size - 1}"]${HI} { color: ${key} !important; }\n`;
+    colorIds.set(key, colorKeys.length);
+    colorKeys.push(key);
+    sheet.textContent += `html.lsu-dark [data-dm-c="${colorIds.get(key)}"]${HI} { color: ${key} !important; }\n`;
   }
   return colorIds.get(key);
 }
 function ensureSheet() {
-  if (!sheet.isConnected) (document.head || root).appendChild(sheet);
+  if (!sheet.isConnected) (document.head || html()).appendChild(sheet);
 }
 const SIDES = { t: "top", r: "right", b: "bottom", l: "left" };
 sheet.textContent =
@@ -96,6 +124,19 @@ function setInline(el, prop, value) {
   if (!(prop in saved)) saved[prop] = [el.style.getPropertyValue(prop), el.style.getPropertyPriority(prop)];
   el.dataset.dmInline = JSON.stringify(saved);
   el.style.setProperty(prop, value, "important");
+}
+
+// Undo setInline for one property, restoring whatever inline value was there before.
+function unsetInline(el, prop) {
+  if (!el.dataset.dmInline) return;
+  const saved = JSON.parse(el.dataset.dmInline);
+  if (!(prop in saved)) return;
+  const [v, p] = saved[prop];
+  if (v) el.style.setProperty(prop, v, p);
+  else el.style.removeProperty(prop);
+  delete saved[prop];
+  if (Object.keys(saved).length) el.dataset.dmInline = JSON.stringify(saved);
+  else delete el.dataset.dmInline;
 }
 
 // ---------- Pass 1: backgrounds ----------
@@ -119,13 +160,24 @@ function planBg(el) {
 
 // Light-mode background behind `el`: the nearest ancestor with a solid color, read
 // while dark mode is switched off (see resolveClear). Ancestors we already overrode
-// inline report their saved original instead.
+// inline report their saved original. If that original was empty, the light color
+// came from a stylesheet, so lift our override for a moment to read it.
 function lightBgBehind(el) {
+  const root = html();
   for (let e = el.parentElement; e && e !== root; e = e.parentElement) {
     const saved = e.dataset.dmInline && JSON.parse(e.dataset.dmInline)["background-color"];
-    const cs = getComputedStyle(e);
-    if (!saved && cs.backgroundImage.includes("url(")) return null;
-    const c = parse(saved ? saved[0] : cs.backgroundColor);
+    let c;
+    if (saved && saved[0]) {
+      c = parse(saved[0]);
+    } else {
+      const ours = saved ? [e.style.getPropertyValue("background-color"), e.style.getPropertyPriority("background-color")] : null;
+      if (ours) e.style.removeProperty("background-color");
+      const cs = getComputedStyle(e);
+      const photo = cs.backgroundImage.includes("url(");
+      c = parse(cs.backgroundColor);
+      if (ours) e.style.setProperty("background-color", ...ours);
+      if (photo && !saved) return null;
+    }
     if (c && c.a >= 0.5) return c;
   }
   return { r: 255, g: 255, b: 255, a: 1 };
@@ -138,6 +190,7 @@ function lightBgBehind(el) {
 function resolveClear(els, bgPlans) {
   const idx = bgPlans.map((p, i) => (p ? i : -1)).filter((i) => i >= 0);
   if (!idx.length) return;
+  const root = html();
   const wasFrozen = root.classList.contains("lsu-dm-freeze");
   root.classList.add("lsu-dm-freeze"); // no transitions, so reads are immediate
   root.classList.remove("lsu-dark");   // no paint happens before we switch it back
@@ -202,6 +255,7 @@ function hasOwnText(el) {
 
 function makeBgFinder() {
   const cache = new Map();
+  const root = html();
   return function effectiveBg(el) {
     const path = [];
     let result = PAGE_BG;
@@ -218,22 +272,51 @@ function makeBgFinder() {
   };
 }
 
-function planFg(el, effectiveBg) {
-  // Already fixed: don't re-measure. A rescan during a color transition (hover
-  // fades, .btn has `transition: color`) would read an in-between color and chase it.
-  if (el.dataset.dmC !== undefined || el.dataset.dmInline?.includes('"color"')) return null;
-  if (!hasOwnText(el)) return null;
-  const c = parse(getComputedStyle(el).color);
-  if (!c || c.a < 0.3) return null;
-  const bg = effectiveBg(el);
-  if (!bg || luminance(bg) > 0.4) return null; // on a light/colored chip: its own text is fine
-  if (contrast(c, bg) >= MIN_CONTRAST) return null;
-  return fixText(c, bg);
+// The color we currently force on `el`, as an rgbKey, or undefined if none.
+function currentFix(el) {
+  if (el.dataset.dmC !== undefined) return colorKeys[el.dataset.dmC];
+  if (el.dataset.dmInline?.includes('"color"')) return el.style.getPropertyValue("color");
+  return undefined;
 }
 
-function applyFg(el, c) {
-  if (!el.hasAttribute("style")) el.dataset.dmC = colorId(c);
-  else setInline(el, "color", `rgb(${c.r}, ${c.g}, ${c.b})`);
+// Returns undefined for "leave as is", or { src, out }: the text's own color and the
+// replacement it needs (out = null: it no longer needs one, so drop our fix).
+function planFg(el, effectiveBg) {
+  if (!hasOwnText(el)) return undefined;
+  const fixed = currentFix(el);
+  let src;
+  if (fixed !== undefined) {
+    // Already fixed: judge the *original* color we saved, never the live one. A
+    // rescan during a color transition (hover fades, .btn has `transition: color`)
+    // would read an in-between color and chase it.
+    if (!el.dataset.dmSrc) return undefined;
+    const [r, g, b] = el.dataset.dmSrc.split(",").map(Number);
+    src = { r, g, b, a: 1 };
+  } else {
+    src = parse(getComputedStyle(el).color);
+    if (!src || src.a < 0.3) return undefined;
+  }
+  // Re-checked on every scan, so a fix follows its background: a section that turns
+  // light gets its original text color back, and one that turns dark gets a new fix.
+  const bg = effectiveBg(el);
+  const ok = !bg || luminance(bg) > 0.4 || contrast(src, bg) >= MIN_CONTRAST; // light chip: own text is fine
+  const out = ok ? null : fixText(src, bg);
+  if ((out ? rgbKey(out) : undefined) === fixed) return undefined;
+  return { src, out };
+}
+
+function applyFg(el, { src, out }) {
+  if (!out) {
+    delete el.dataset.dmC;
+    delete el.dataset.dmSrc;
+    unsetInline(el, "color");
+    return;
+  }
+  el.dataset.dmSrc = `${src.r},${src.g},${src.b}`;
+  // Keep using whichever mechanism the element already has (see the top of the file)
+  const viaData = el.dataset.dmC !== undefined || (currentFix(el) === undefined && !el.hasAttribute("style"));
+  if (viaData) el.dataset.dmC = colorId(out);
+  else setInline(el, "color", rgbKey(out));
 }
 
 // `freeze`: for full-page scans right after dark mode switches on. Snap animates
@@ -241,13 +324,21 @@ function applyFg(el, c) {
 // mark it as a card forever. Not used for routine scans, where cancelling transitions
 // would make drawers and menus jump instead of slide.
 function scan(node, { freeze = false } = {}) {
-  if (!root.classList.contains("lsu-dark") || !node || node.nodeType !== 1 || !node.isConnected) return;
+  const root = html();
+  if (!isDark() || !root || !node || node.nodeType !== 1 || !node.isConnected) return;
+  // Hand any page mutations that are still undelivered to the queue first, so that
+  // dropping the records our own writes create (below) can't swallow them.
+  handleMutations(observer.takeRecords());
   ensureSheet();
   if (freeze) root.classList.add("lsu-dm-freeze");
   try {
     scanElements(node);
   } finally {
     if (freeze) root.classList.remove("lsu-dm-freeze");
+    // Everything recorded since the call above is our own doing (inline overrides,
+    // the class flips in resolveClear). Rescanning for those would only re-measure
+    // elements we just fixed.
+    observer.takeRecords();
   }
 }
 
@@ -276,6 +367,7 @@ function restoreAll() {
   });
   document.querySelectorAll("[data-dm-bg]").forEach((el) => delete el.dataset.dmBg);
   document.querySelectorAll("[data-dm-c]").forEach((el) => delete el.dataset.dmC);
+  document.querySelectorAll("[data-dm-src]").forEach((el) => delete el.dataset.dmSrc);
   document.querySelectorAll("[data-dm-bd]").forEach((el) => delete el.dataset.dmBd);
 }
 
@@ -293,44 +385,71 @@ function queue(node) {
   }, 50);
 }
 
-new MutationObserver((mutations) => {
+function handleMutations(mutations) {
   for (const m of mutations) {
-    if (m.type === "childList") m.addedNodes.forEach((n) => n.nodeType === 1 && queue(n));
-    else if (m.target !== root) queue(m.target); // class/style change can restyle the whole subtree
+    if (m.type === "childList") {
+      // A new <html> (document.open/write in the editor iframe): put our classes back
+      if (m.target === document) syncRootClasses();
+      m.addedNodes.forEach((n) => n.nodeType === 1 && queue(n));
+    } else if (m.target === html()) {
+      // Our own flips are dropped in scan(); anything left is the page rewriting <html class>
+      const cl = m.target.classList;
+      if (cl.contains("lsu-dark") !== isDark() || cl.contains("lsu-amoled") !== state.amoled) syncRootClasses();
+    } else {
+      queue(m.target); // class/style change can restyle the whole subtree
+    }
   }
-}).observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class"] });
+}
+
+// Observe the document, not <html>: the document survives document.open, <html> doesn't.
+const observer = new MutationObserver(handleMutations);
+observer.observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class"] });
 
 // Mobile browsers tint their toolbar with <meta name="theme-color">; match the page.
 let originalThemeColor;
 function syncThemeColor() {
-  if (!document.head) return;
+  if (!document.head || window.top !== window) return;
   let meta = document.head.querySelector('meta[name="theme-color"]');
   if (originalThemeColor === undefined) originalThemeColor = meta ? meta.content : null;
-  const on = root.classList.contains("lsu-dark");
-  if (!on && originalThemeColor === null) { meta?.remove(); return; }
+  if (!isDark() && originalThemeColor === null) { meta?.remove(); return; }
   if (!meta) {
     meta = document.createElement("meta");
     meta.name = "theme-color";
     document.head.appendChild(meta);
   }
-  meta.content = on ? (root.classList.contains("lsu-amoled") ? "#000000" : "#1e1b26") : originalThemeColor;
+  meta.content = isDark() ? (state.amoled ? "#000000" : "#1e1b26") : originalThemeColor;
 }
 
-function applySettings({ enabled, amoled }) {
-  if (amoled !== undefined) root.classList.toggle("lsu-amoled", amoled);
-  if (enabled !== undefined) {
-    root.classList.toggle("lsu-dark", enabled);
-    if (enabled) document.body && scan(document.body, { freeze: true });
+// `applied`: whether the page is currently themed, so update() knows whether the
+// whole page needs a scan (turning on) or a restore (turning off).
+let applied = isDark();
+function update() {
+  syncRootClasses();
+  const now = isDark();
+  if (now !== applied) {
+    applied = now;
+    if (now) document.body && scan(document.body, { freeze: true });
     else restoreAll();
   }
   syncThemeColor();
 }
 
+function applySettings(settings) {
+  for (const k in DEFAULTS) if (settings[k] !== undefined) state[k] = settings[k];
+  saveCache();
+  update();
+}
+
+// Auto mode: follow the OS switching between light and dark (e.g. at sunset)
+systemDark.addEventListener("change", update);
+
 document.addEventListener("DOMContentLoaded", () => { scan(document.body, { freeze: true }); syncThemeColor(); });
 window.addEventListener("load", () => scan(document.body, { freeze: true }));
 
-chrome.storage.sync.get({ enabled: true, amoled: false }, applySettings);
+chrome.storage.sync.get(DEFAULTS, applySettings);
 
 chrome.storage.onChanged.addListener((changes) => {
-  applySettings({ enabled: changes.enabled?.newValue, amoled: changes.amoled?.newValue });
+  const settings = {};
+  for (const k in DEFAULTS) if (changes[k]) settings[k] = changes[k].newValue;
+  applySettings(settings);
 });

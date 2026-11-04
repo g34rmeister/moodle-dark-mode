@@ -4,7 +4,7 @@ Everything the [Developer Dashboard](https://chrome.google.com/webstore/devconso
 
 ## Package
 
-Run `python build.py`, then upload `dist/lsu-moodle-dark-<version>.zip`. It contains only the runtime files (manifest, CSS, JS, popup, icons). Bump `version` in `manifest.json` before every re-upload: the store rejects a version it has already seen.
+Run `python build.py`, then upload `dist/lsu-moodle-dark-<version>-chrome.zip` (the same zip works for Edge Add-ons and Opera add-ons; Firefox uses `-firefox.zip` on addons.mozilla.org, with the same description). It contains only the runtime files (manifest, CSS, JS, popup, icons). Bump `version` in `manifest.json` before every re-upload: the store rejects a version it has already seen.
 
 ## Store listing tab
 
@@ -18,12 +18,13 @@ Run `python build.py`, then upload `dist/lsu-moodle-dark-<version>.zip`. It cont
 A dark theme for LSU Moodle (moodle.lsu.edu) that is easy on the eyes at night.
 
 • Dark mode for every part of Moodle: course pages, the contents sidebar, cards, menus, forms, grades, messages, forums, quizzes and the calendar
+• Auto mode: follows your system's light/dark setting
 • AMOLED black: a true-black background that switches off OLED pixels and saves battery
 • Automatic contrast fixes: anything the theme doesn't cover (including content pasted by instructors) is detected and adjusted, so text stays readable (WCAG AA)
 • Keeps the LSU look: gold logo and accents, purple highlights
 • One-click toggle in the toolbar, no page reload needed
 
-Privacy: the extension only runs on moodle.lsu.edu, sends no data anywhere, and stores only your two settings (dark mode on/off, AMOLED on/off) with Chrome's sync storage.
+Privacy: the extension only runs on moodle.lsu.edu, sends no data anywhere, and stores only your settings (dark mode off/on/auto, AMOLED on/off) with Chrome's sync storage.
 
 Unofficial student project, not affiliated with or endorsed by Louisiana State University. Open source (MIT).
 ```

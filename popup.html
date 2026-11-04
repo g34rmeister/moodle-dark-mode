@@ -1,32 +1,56 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
+  <title>LSU Moodle Dark</title>
   <style>
     body {
       margin: 0; padding: 14px 16px; width: 240px;
       background: #1e1b26; color: #e7e4ee;
       font: 14px system-ui, sans-serif;
     }
-    label { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
-    label + label { margin-top: 12px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .row ~ .row { margin-top: 12px; } /* ~, not +: the Auto note can sit between rows */
+    label.row { cursor: pointer; }
     label.disabled { opacity: 0.45; cursor: default; }
     small { display: block; color: #a8a2b8; font-size: 12px; margin-top: 2px; }
-    /* flex-shrink: 0 — a long label must not squeeze the switch (the knob's travel
+
+    /* Off / On / Auto: a radio group drawn as a segmented control */
+    .seg { display: flex; flex-shrink: 0; border: 1px solid #3a3548; border-radius: 8px; padding: 2px; gap: 2px; }
+    .seg input { position: absolute; opacity: 0; pointer-events: none; }
+    .seg label { padding: 3px 9px; border-radius: 6px; cursor: pointer; color: #a8a2b8; font-size: 13px; }
+    .seg input:checked + label { background: #6d4fc4; color: #fff; }
+    .seg input:focus-visible + label { outline: 2px solid #fdd023; outline-offset: 1px; }
+    #auto-note { margin-top: 6px; }
+    #auto-note[hidden] { display: none; }
+
+    /* Switch. flex-shrink: 0: a long label must not squeeze it (the knob's travel
        assumes exactly 38px); margin: 0 drops Chrome's default checkbox margins */
-    input { appearance: none; flex-shrink: 0; margin: 0; width: 38px; height: 22px; border-radius: 11px;
-            background: #3a3548; position: relative; cursor: pointer; transition: background .15s; }
-    input:focus { outline: none; }
-    input:focus-visible { outline: 2px solid #fdd023; outline-offset: 2px; }
-    input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
-                   border-radius: 50%; background: #e7e4ee; transition: left .15s; }
-    input:checked { background: #6d4fc4; }
-    input:checked::after { left: 19px; background: #fdd023; }
+    input[type="checkbox"] {
+      appearance: none; flex-shrink: 0; margin: 0; width: 38px; height: 22px; border-radius: 11px;
+      background: #3a3548; position: relative; cursor: pointer; transition: background .15s;
+    }
+    input[type="checkbox"]:focus { outline: none; }
+    input[type="checkbox"]:focus-visible { outline: 2px solid #fdd023; outline-offset: 2px; }
+    input[type="checkbox"]::after {
+      content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+      border-radius: 50%; background: #e7e4ee; transition: left .15s;
+    }
+    input[type="checkbox"]:checked { background: #6d4fc4; }
+    input[type="checkbox"]:checked::after { left: 19px; background: #fdd023; }
   </style>
 </head>
 <body>
-  <label>Dark mode <input type="checkbox" id="toggle"></label>
-  <label id="amoled-row"><span>AMOLED black<small>True black, saves battery on OLED</small></span>
+  <div class="row" role="radiogroup" aria-labelledby="mode-label">
+    <span id="mode-label">Dark mode</span>
+    <div class="seg">
+      <input type="radio" name="mode" id="mode-off" value="off"><label for="mode-off">Off</label>
+      <input type="radio" name="mode" id="mode-on" value="on"><label for="mode-on">On</label>
+      <input type="radio" name="mode" id="mode-auto" value="auto"><label for="mode-auto">Auto</label>
+    </div>
+  </div>
+  <small id="auto-note" hidden>Follows your system's light/dark setting</small>
+  <label class="row" id="amoled-row"><span>AMOLED black<small>True black, saves battery on OLED</small></span>
     <input type="checkbox" id="amoled"></label>
   <script src="popup.js"></script>
 </body>

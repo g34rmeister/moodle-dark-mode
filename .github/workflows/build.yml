@@ -1,0 +1,54 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntax-check scripts
+        run: |
+          node --check content.js
+          node --check popup.js
+          python -m json.tool manifest.json > /dev/null
+      - name: Rebuild userscript and store package
+        run: python build.py
+      - name: Lint the Firefox build
+        run: npx --yes web-ext@10.8.0 lint --source-dir dist/build/firefox --self-hosted=false
+      - name: Committed userscript must match the sources
+        run: |
+          node --check dist/lsu-moodle-dark.user.js
+          git diff --exit-code dist/lsu-moodle-dark.user.js || {
+            echo "::error::dist/lsu-moodle-dark.user.js is out of date. Run 'python build.py' and commit it."
+            exit 1
+          }
+
+  browsers:
+    # The extension in Chromium and Firefox, the userscript in WebKit (Safari's engine)
+    needs: check
+    runs-on: ubuntu-24.04 # Playwright's WebKit build needs a supported Ubuntu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+      - name: Build
+        run: python build.py
+      - name: Install Playwright browsers
+        working-directory: tests
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium webkit
+      # Firefox and geckodriver come preinstalled on GitHub's Ubuntu runners
+      - name: Run browser tests
+        working-directory: tests
+        run: node run.mjs
