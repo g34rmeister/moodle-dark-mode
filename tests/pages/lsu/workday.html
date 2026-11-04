@@ -1,0 +1,51 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>workday</title>
+<style>
+  /* Workday writes its colors in oklch(), which stays oklch() in computed styles */
+  /* Workday's grey page is a full-window <div>, not <body>; white cards sit on it */
+  body { margin: 0; }
+  .page { min-height: 100vh; background: oklch(0.9692 0.0035 248.23); }
+  .card { background: oklch(1 0 0); color: oklch(0.0969 0 0 / 0.84); }
+  .wd-icon-fill { fill: oklch(0.2891 0 0); }
+  .chip { display: inline-block; background: rgb(215, 187, 251); }
+  .chip .wd-icon-fill { fill: #333; }
+  /* Grid cells and buttons animate every property */
+  .cell { background: #fff; transition: all 0.3s ease-in; }
+  .divider { height: 1px; border: 0; background: oklch(0.856 0.0111 256.85); }
+</style></head>
+<body>
+<div class="page" id="page">
+<!-- Header wordmark (a purple image), found by its automation id -->
+<button data-automation-id="wd_header_home_icon"><img id="logo" src="/photo.svg" alt=""></button>
+<div class="card" id="card">card text</div>
+<!-- Dark icon on the dark page: recolored. The same icon on a light chip: left alone. -->
+<svg class="wd-icon" width="10" height="10"><path id="icon" class="wd-icon-fill" d="M0 0h10v10H0z"/></svg>
+<!-- A light outline around a dark interior (Snap draws icons like this): stays an outline -->
+<svg width="10" height="10"><circle id="outline" cx="5" cy="5" r="4" fill="#000" stroke="#fff" stroke-width="1"/></svg>
+<span class="chip"><svg class="wd-icon" width="10" height="10"><path id="chipIcon" class="wd-icon-fill" d="M0 0h10v10H0z"/></svg></span>
+<hr class="divider" id="rule">
+<table><tbody id="rows"></tbody></table>
+<pre id="out"></pre>
+</div>
+<script>
+// A grid row arriving after load (Workday renders grids late). Its cell is cleared
+// by content.js, but reads white for a moment because of the transition.
+setTimeout(() => {
+  document.getElementById("rows").innerHTML = '<tr><td class="cell"><span id="late" style="color: oklch(0.0969 0 0 / 0.84)">Register</span></td></tr>';
+}, 600);
+setTimeout(() => {
+  const cs = (id) => getComputedStyle(document.getElementById(id));
+  document.getElementById("out").textContent = "RESULT " + JSON.stringify({
+    htmlClass: document.documentElement.className,
+    pageBg: cs("page").backgroundColor,
+    cardBg: cs("card").backgroundColor,
+    cardText: cs("card").color,
+    iconFill: cs("icon").fill,
+    chipIconFill: cs("chipIcon").fill,
+    outlineFill: cs("outline").fill,
+    lateText: cs("late").color,
+    ruleBg: cs("rule").backgroundColor,
+    logoTinted: cs("logo").filter !== "none",
+  });
+}, 2000);
+</script></body></html>

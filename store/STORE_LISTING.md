@@ -11,20 +11,21 @@ Run `python build.py`, then upload `dist/lsu-moodle-dark-<version>-chrome.zip` (
 **Name** (from the manifest): LSU Moodle Dark (Unofficial)
 
 **Summary** (from the manifest, 132 characters max):
-> Unofficial dark and AMOLED theme for LSU Moodle, with automatic contrast fixes. Not affiliated with LSU.
+> Unofficial dark and AMOLED theme for LSU Moodle, Workday and myLSU, with automatic contrast fixes. Not affiliated with LSU.
 
 **Description:**
 ```
-A dark theme for LSU Moodle (moodle.lsu.edu) that is easy on the eyes at night.
+A dark theme for LSU Moodle (moodle.lsu.edu), LSU Workday and the myLSU portal that is easy on the eyes at night.
 
 • Dark mode for every part of Moodle: course pages, the contents sidebar, cards, menus, forms, grades, messages, forums, quizzes and the calendar
+• Workday and myLSU too: the home pages, menus, data grids and icons
 • Auto mode: follows your system's light/dark setting
 • AMOLED black: a true-black background that switches off OLED pixels and saves battery
 • Automatic contrast fixes: anything the theme doesn't cover (including content pasted by instructors) is detected and adjusted, so text stays readable (WCAG AA)
 • Keeps the LSU look: gold logo and accents, purple highlights
 • One-click toggle in the toolbar, no page reload needed
 
-Privacy: the extension only runs on moodle.lsu.edu, sends no data anywhere, and stores only your settings (dark mode off/on/auto, AMOLED on/off) with Chrome's sync storage.
+Privacy: the extension only runs on moodle.lsu.edu, LSU's Workday pages (myworkday.com/lsu) and mylsu.apps.lsu.edu, sends no data anywhere, and stores only your settings (dark mode off/on/auto, AMOLED on/off) with Chrome's sync storage.
 
 Unofficial student project, not affiliated with or endorsed by Louisiana State University. Open source (MIT).
 ```
@@ -42,13 +43,13 @@ Unofficial student project, not affiliated with or endorsed by Louisiana State U
 ## Privacy practices tab
 
 **Single purpose:**
-> Applies a dark (or true-black AMOLED) color theme to the LSU Moodle website, moodle.lsu.edu.
+> Applies a dark (or true-black AMOLED) color theme to LSU's student websites: Moodle (moodle.lsu.edu), Workday (myworkday.com/lsu) and the myLSU portal (mylsu.apps.lsu.edu).
 
 **Permission justification: `storage`:**
 > Saves the user's two preferences (dark mode on/off and AMOLED on/off) so they persist across pages and browser restarts.
 
-**Host permission justification (content script on `https://moodle.lsu.edu/*`):**
-> The extension's stylesheet and script must run on moodle.lsu.edu pages to recolor them. It runs on no other site.
+**Host permission justification (content scripts on `https://moodle.lsu.edu/*`, `https://*.myworkday.com/lsu/*`, `https://mylsu.apps.lsu.edu/*`):**
+> The extension's stylesheets and script must run on these pages to recolor them. On myworkday.com it is limited to LSU's tenant path (/lsu/), so other institutions' Workday pages are untouched. It runs on no other site.
 
 **Remote code:** No, I am not using remote code. (All code ships in the package; nothing is fetched or evaluated at runtime.)
 

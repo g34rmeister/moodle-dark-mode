@@ -1,0 +1,23 @@
+/* LSU Workday (www.myworkday.com/lsu). The palette is in base.css, loaded first.
+   Workday's class names are generated (css-1jqn5du, WKQM) and change between
+   releases, so the rules here hook onto data-automation-id, which Workday keeps
+   stable for its own test automation. Most of the page is handled by content.js:
+   Workday's colors are oklch(), which it converts, and its .wd-icon SVGs are
+   recolored by the icon part of the contrast pass. */
+html.lsu-dark {
+
+  /* LSU wordmark in the header (a purple image) -> LSU gold, as on Moodle */
+  [data-automation-id="wd_header_home_icon"] img {
+    filter: brightness(0) saturate(100%) invert(64%) sepia(62%) saturate(2982%)
+            hue-rotate(348deg) brightness(155%) contrast(99%) !important;
+  }
+
+  /* Workday logo in the home page footer: dark navy text + orange arc. Inverting
+     with a half-turn of hue keeps the arc orange and makes the text light. */
+  [data-automation-id="pex-home-footer-logo"] {
+    filter: invert(1) hue-rotate(180deg) brightness(1.2);
+  }
+
+  /* Section dividers are <hr>s drawn with a light background, not a border */
+  hr { background-color: var(--dm-border) !important; }
+}

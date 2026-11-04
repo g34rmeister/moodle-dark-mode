@@ -1,30 +1,7 @@
 
-/* All rules are nested under html.lsu-dark so the popup toggle can switch them off */
+/* LSU Moodle (Snap theme). The palette is in base.css, loaded first.
+   All rules are nested under html.lsu-dark so the popup toggle can switch them off */
 html.lsu-dark {
-
-  & {
-    --dm-bg:        #15131b;
-    --dm-surface:   #1e1b26;
-    --dm-surface-2: #282432;
-    --dm-border:    #3a3548;
-    --dm-text:      #e7e4ee;
-    --dm-muted:     #a8a2b8;
-    --dm-link:      #bfa8f5;   /* LSU purple, lifted for contrast */
-    --dm-link-hov:  #fdd023;   /* LSU gold */
-    --dm-primary:   #6d4fc4;
-    --dm-overlay:   rgba(21, 19, 27, 0.8);  /* translucent panels over photos */
-    color-scheme: dark;
-  }
-
-  /* AMOLED: true-black page (pixels off on OLED screens). Surfaces stay just above
-     black so cards remain distinguishable, and borders carry more of the structure. */
-  &.lsu-amoled {
-    --dm-bg:        #000000;
-    --dm-surface:   #0b0a0f;
-    --dm-surface-2: #16141c;
-    --dm-border:    #2c2836;
-    --dm-overlay:   rgba(0, 0, 0, 0.75);
-  }
 
   /* ---------- Page base ---------- */
   &, body, #page, #page-wrapper, #page-content, #region-main,
@@ -286,9 +263,6 @@ html.lsu-dark {
      A brightness(0) silhouette would turn outlined circles into solid blobs. */
   img.icon:not(.activityicon) { filter: invert(1) hue-rotate(180deg); }
   .fa, .icon.fa { color: var(--dm-text) !important; }
-
-  /* Scrollbars */
-  * { scrollbar-color: var(--dm-border) var(--dm-bg); }
 
   /* ================= Snap theme (what LSU actually runs) ================= */
 

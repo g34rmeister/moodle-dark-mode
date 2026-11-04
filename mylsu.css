@@ -1,0 +1,11 @@
+/* myLSU portal (mylsu.apps.lsu.edu, Unifyed). The palette is in base.css, loaded
+   first. content.js handles the page itself; these are the images it can't recolor. */
+html.lsu-dark {
+
+  /* "myLSU" wordmark: gold "my" + dark purple "LSU" in one image. Brightening lifts
+     the purple off the dark header while the gold stays gold. */
+  img.logo.tenantbig { filter: brightness(1.7) saturate(0.85); }
+
+  /* Header icons (notification bell) are dark line-art SVG images */
+  img.dock-menu-icon { filter: brightness(0) invert(0.9); }
+}

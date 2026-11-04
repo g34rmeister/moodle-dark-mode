@@ -1,6 +1,7 @@
 // Browser tests: the extension in Chromium and Firefox, the userscript in WebKit
 // (Safari's engine, emulating an iPhone). Each page in pages/ imitates a piece of
-// moodle.lsu.edu and writes "RESULT {json}" into #out; this file checks the values.
+// moodle.lsu.edu or LSU Workday and writes "RESULT {json}" into #out; this file
+// checks the values.
 //
 //   python build.py              (the tests use dist/, so build first)
 //   cd tests && npm ci && npx playwright install chromium webkit
@@ -28,7 +29,7 @@ const DIST = {
 };
 const CI = !!process.env.CI;
 
-// ---------- expected values (dark palette from dark.css) ----------
+// ---------- expected values (dark palette from base.css) ----------
 const BG = "rgb(21, 19, 27)", SURFACE = "rgb(30, 27, 38)", SURFACE_2 = "rgb(40, 36, 50)";
 const BORDER = "rgb(58, 53, 72)", TEXT = "rgb(231, 228, 238)", MUTED = "rgb(168, 162, 184)";
 const GOLD = "rgb(253, 208, 35)";
@@ -48,9 +49,29 @@ const EXPECT = {
   "card.html": { quickLinkChipBg: SURFACE, quickLinkIcon: GOLD },
   // Extension only: the userscript reads its settings synchronously and has no cache
   "cache.html": { firstPaintClass: "", settledClass: "lsu-dark" },
+  "lsu/workday.html": {
+    htmlClass: "lsu-dark",
+    pageBg: BG,                          // the full-window wrapper is the page, not a card
+    cardBg: SURFACE,                     // oklch(1 0 0) is read as white and darkened
+    cardText: TEXT,
+    iconFill: TEXT,                      // dark SVG icon on the dark page
+    chipIconFill: "rgb(51, 51, 51)",     // same icon on a light chip keeps its color
+    outlineFill: "rgb(0, 0, 0)",         // its white stroke already draws it
+    lateText: TEXT,                      // text in a cell that was still fading out
+    ruleBg: BORDER,                      // workday.css
+    logoTinted: true,                    // workday.css
+  },
+  // Another institution's Workday tenant: not ours to restyle
+  "other.html": { htmlClass: "" },
 };
-const EXTENSION_PAGES = ["editor.html", "follow.html", "card.html", "cache.html"];
-const USERSCRIPT_PAGES = ["editor.html", "follow.html", "card.html"];
+// Which host each page is served as (default moodle.lsu.edu)
+const HOSTS = { "lsu/workday.html": "www.myworkday.com", "other.html": "www.myworkday.com" };
+const ALL_HOSTS = ["moodle.lsu.edu", "www.myworkday.com"];
+const pageUrl = (name, port) => `https://${HOSTS[name] || "moodle.lsu.edu"}${port ? `:${port}` : ""}/${name}`;
+const EXTENSION_PAGES = ["editor.html", "follow.html", "card.html", "cache.html", "lsu/workday.html", "other.html"];
+// (Not other.html: Playwright injects the userscript into every page, while a real
+// userscript manager only runs it where its @match lines allow)
+const USERSCRIPT_PAGES = ["editor.html", "follow.html", "card.html", "lsu/workday.html"];
 
 // ---------- reporting ----------
 let failures = 0;
@@ -78,7 +99,7 @@ async function waitResult(read, timeout = 15000) {
   return null;
 }
 
-// ---------- local "moodle.lsu.edu" over HTTPS ----------
+// ---------- local "moodle.lsu.edu" / "www.myworkday.com" over HTTPS ----------
 const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".svg": "image/svg+xml" };
 function pageFile(url) {
   const p = join(PAGES, new URL(url, "https://x").pathname.replace(/^\/+/, ""));
@@ -106,12 +127,12 @@ async function testChromium(port) {
   const ctx = await chromium.launchPersistentContext(profile, {
     channel: "chromium", headless: true, ignoreHTTPSErrors: true,
     args: [`--disable-extensions-except=${DIST.chrome}`, `--load-extension=${DIST.chrome}`,
-      `--host-resolver-rules=MAP moodle.lsu.edu:443 127.0.0.1:${port}`],
+      `--host-resolver-rules=${ALL_HOSTS.map((h) => `MAP ${h}:443 127.0.0.1:${port}`).join(", ")}`],
   });
   try {
     for (const name of EXTENSION_PAGES) {
       const page = await ctx.newPage();
-      await page.goto(`https://moodle.lsu.edu/${name}`);
+      await page.goto(pageUrl(name));
       check("chromium", name, await waitResult(() => page.locator("#out").textContent()), EXPECT[name]);
       await page.close();
     }
@@ -147,14 +168,14 @@ async function testFirefox(port) {
     for (let i = 0; i < 50 && !sid; i++) {
       try {
         sid = (await call("POST", "/session", { capabilities: { alwaysMatch: { acceptInsecureCerts: true, "moz:firefoxOptions": {
-          args: ["-headless"], prefs: { "network.dns.localDomains": "moodle.lsu.edu" } } } } })).sessionId;
+          args: ["-headless"], prefs: { "network.dns.localDomains": ALL_HOSTS.join(",") } } } } })).sessionId;
       } catch (e) { if (!String(e).includes("fetch failed")) throw e; await sleep(200); }
     }
     if (!sid) return skipOrFail("firefox", "geckodriver did not start");
     await call("POST", `/session/${sid}/moz/addon/install`, { addon: readFileSync(DIST.firefoxZip).toString("base64"), temporary: true });
     for (const name of EXTENSION_PAGES) {
       // Match patterns ignore the port, so the extension runs on moodle.lsu.edu:<port>
-      await call("POST", `/session/${sid}/url`, { url: `https://moodle.lsu.edu:${port}/${name}` });
+      await call("POST", `/session/${sid}/url`, { url: pageUrl(name, port) });
       const read = () => call("POST", `/session/${sid}/execute/sync`, { script: "return document.getElementById('out')?.textContent", args: [] });
       check("firefox", name, await waitResult(read), EXPECT[name]);
     }
@@ -174,11 +195,13 @@ async function testWebKit() {
   // `pre` runs before the userscript, like settings already saved from an earlier visit
   const newContext = async (opts = {}, pre) => {
     const ctx = await browser.newContext({ ...devices["iPhone 15"], ...opts });
-    await ctx.route("https://moodle.lsu.edu/**", (route) => {
-      const p = pageFile(route.request().url());
-      if (!p) return route.fulfill({ status: 404, body: "" });
-      route.fulfill({ status: 200, contentType: TYPES[extname(p)], body: readFileSync(p) });
-    });
+    for (const host of ALL_HOSTS) {
+      await ctx.route(`https://${host}/**`, (route) => {
+        const p = pageFile(route.request().url());
+        if (!p) return route.fulfill({ status: 404, body: "" });
+        route.fulfill({ status: 200, contentType: TYPES[extname(p)], body: readFileSync(p) });
+      });
+    }
     if (pre) await ctx.addInitScript(pre);
     await ctx.addInitScript({ path: DIST.userscript }); // a manager injecting at document-start
     return ctx;
@@ -187,7 +210,7 @@ async function testWebKit() {
     let ctx = await newContext();
     for (const name of USERSCRIPT_PAGES) {
       const page = await ctx.newPage();
-      await page.goto(`https://moodle.lsu.edu/${name}`);
+      await page.goto(pageUrl(name));
       check("webkit", name, await waitResult(() => page.locator("#out").textContent()), EXPECT[name]);
       await page.close();
     }
@@ -215,6 +238,22 @@ async function testWebKit() {
     await sleep(500);
     const onDark = await p.evaluate(() => document.documentElement.className);
     check("webkit", "auto mode", { onLight, onDark }, { onLight: "", onDark: "lsu-dark" });
+    await ctx.close();
+
+    // AMOLED: the same Workday page, with the true-black palette
+    const amoled = () => localStorage.setItem("lsu-moodle-dark", JSON.stringify({ enabled: true, amoled: true }));
+    ctx = await newContext({}, amoled);
+    const a = await ctx.newPage();
+    await a.goto(pageUrl("lsu/workday.html"));
+    check("webkit", "amoled lsu/workday.html", await waitResult(() => a.locator("#out").textContent()), {
+      htmlClass: "lsu-amoled lsu-dark",
+      pageBg: "rgb(0, 0, 0)",            // pixels off
+      cardBg: "rgb(11, 10, 15)",         // AMOLED surface
+      cardText: TEXT,
+      iconFill: TEXT,
+      lateText: TEXT,
+      ruleBg: "rgb(44, 40, 54)",         // AMOLED border
+    });
     await ctx.close();
   } finally {
     await browser.close();

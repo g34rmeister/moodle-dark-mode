@@ -27,11 +27,13 @@ function syncRootClasses() {
 }
 syncRootClasses();
 
-// dark.css handles the known parts of the page. This script is the safety net for
-// everything else. It reads each element's *computed* colors and:
+// The stylesheets (base.css + the site's own) handle the known parts of the page.
+// This script is the safety net for everything else. It reads each element's
+// *computed* colors and:
 //   1. darkens any background that is still light, then
 //   2. lightens any text that fails WCAG AA contrast (4.5:1) against the background
-//      it actually sits on — keeping its hue, so purple stays purple.
+//      it actually sits on — keeping its hue, so purple stays purple — and any
+//      SVG icon shape below 3:1 (WCAG's bar for graphics).
 //
 // Snap has rules like `.summary div[style] { border: inherit; padding: inherit }`, so
 // we never add a style attribute to an element that lacks one. Those elements get
@@ -39,8 +41,9 @@ syncRootClasses();
 // theme's own `!important` utility classes. Elements that already have inline styles
 // (possibly `!important`) get inline overrides; originals are saved for the toggle.
 
-// Replacement colors are CSS variables from dark.css, so switching between the dark
+// Replacement colors are CSS variables from base.css, so switching between the dark
 // and AMOLED palettes restyles everything we touched without rescanning.
+const PAGE = "var(--dm-bg)";
 const SURFACE = "var(--dm-surface)";
 const OVERLAY = "var(--dm-overlay)";
 const BORDER = "var(--dm-border)";
@@ -52,11 +55,40 @@ const HI = ":not(#dm_):not(#dm_):not(#dm_)"; // specificity boost: 3 IDs
 const SKIP = new Set(["SCRIPT", "STYLE", "LINK", "META", "IMG", "PICTURE", "VIDEO",
   "CANVAS", "IFRAME", "svg", "path", "BR", "HR", "NOSCRIPT", "OBJECT", "EMBED", "HEAD", "TITLE"]);
 
+// Computed colors are usually rgb()/rgba(), but a color authored in a newer syntax
+// keeps it: Workday's stylesheets use oklch(), so its computed colors read e.g.
+// "oklch(0.9692 0.0035 248.23)". Those are converted to sRGB by painting one pixel
+// on a canvas, once per distinct string.
+const RGB_RE = /^rgba?\(([\d.]+),?\s*([\d.]+),?\s*([\d.]+)(?:\s*[,/]\s*([\d.]+%?))?/;
+const parsed = new Map();
+let pixel;
 function parse(color) {
-  const m = color && color.match(/rgba?\(([\d.]+),?\s*([\d.]+),?\s*([\d.]+)(?:\s*[,/]\s*([\d.]+%?))?/);
-  if (!m) return null;
-  const a = m[4] === undefined ? 1 : parseFloat(m[4]) / (m[4].endsWith("%") ? 100 : 1);
-  return { r: +m[1], g: +m[2], b: +m[3], a };
+  if (!color) return null;
+  const m = color.match(RGB_RE);
+  if (m) {
+    const a = m[4] === undefined ? 1 : parseFloat(m[4]) / (m[4].endsWith("%") ? 100 : 1);
+    return { r: +m[1], g: +m[2], b: +m[3], a };
+  }
+  if (!parsed.has(color)) parsed.set(color, viaCanvas(color));
+  return parsed.get(color);
+}
+function viaCanvas(color) {
+  if (!/^(oklch|oklab|lab|lch|color|hwb|hsla?)\(/.test(color)) return null;
+  try {
+    if (!pixel) {
+      const c = document.createElement("canvas");
+      c.width = c.height = 1;
+      pixel = c.getContext("2d", { willReadFrequently: true });
+    }
+    pixel.clearRect(0, 0, 1, 1);
+    pixel.fillStyle = "#000";
+    pixel.fillStyle = color;
+    pixel.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = pixel.getImageData(0, 0, 1, 1).data;
+    return { r, g, b, a: a / 255 };
+  } catch {
+    return null;
+  }
 }
 
 function luminance({ r, g, b }) {
@@ -93,23 +125,33 @@ function fixText(c, bg) {
 
 // ---------- Generated rules for elements without a style attribute ----------
 const sheet = document.createElement("style");
+// The properties the contrast pass may recolor. Text needs 4.5:1 (WCAG AA); icon
+// shapes (<svg> paths, e.g. Workday's .wd-icon-fill) need 3:1, WCAG's bar for
+// graphics. `id` / `src` are the dataset keys holding our color and the original.
+const PAINTS = {
+  color:  { id: "dmC", src: "dmSrc", attr: "data-dm-c", min: MIN_CONTRAST },
+  fill:   { id: "dmF", src: "dmFsrc", attr: "data-dm-f", min: 3 },
+  stroke: { id: "dmS", src: "dmSsrc", attr: "data-dm-s", min: 3 },
+};
 const colorIds = new Map();
-const colorKeys = []; // id -> key, the reverse of colorIds
+const colorKeys = []; // id -> rgbKey, the reverse of colorIds
 const rgbKey = ({ r, g, b }) => `rgb(${r}, ${g}, ${b})`;
-function colorId(c) {
+function colorId(c, prop) {
   const key = rgbKey(c);
-  if (!colorIds.has(key)) {
-    colorIds.set(key, colorKeys.length);
+  const mapKey = `${prop} ${key}`;
+  if (!colorIds.has(mapKey)) {
+    colorIds.set(mapKey, colorKeys.length);
     colorKeys.push(key);
-    sheet.textContent += `html.lsu-dark [data-dm-c="${colorIds.get(key)}"]${HI} { color: ${key} !important; }\n`;
+    sheet.textContent += `html.lsu-dark [${PAINTS[prop].attr}="${colorIds.get(mapKey)}"]${HI} { ${prop}: ${key} !important; }\n`;
   }
-  return colorIds.get(key);
+  return colorIds.get(mapKey);
 }
 function ensureSheet() {
   if (!sheet.isConnected) (document.head || html()).appendChild(sheet);
 }
 const SIDES = { t: "top", r: "right", b: "bottom", l: "left" };
 sheet.textContent =
+  `html.lsu-dark [data-dm-bg="page"]${HI} { background-color: ${PAGE} !important; background-image: none !important; }\n` +
   `html.lsu-dark [data-dm-bg="solid"]${HI} { background-color: ${SURFACE} !important; background-image: none !important; }\n` +
   `html.lsu-dark [data-dm-bg="overlay"]${HI} { background-color: ${OVERLAY} !important; }\n` +
   `html.lsu-dark [data-dm-bg="clear"]${HI} { background-color: transparent !important; background-image: none !important; }\n` +
@@ -141,7 +183,7 @@ function unsetInline(el, prop) {
 
 // ---------- Pass 1: backgrounds ----------
 function planBg(el) {
-  if (el === document.body) return null; // page base is dark.css's job
+  if (el === document.body) return null; // page base is base.css's job
   const cs = getComputedStyle(el);
   const bg = parse(cs.backgroundColor);
   const img = cs.backgroundImage;
@@ -153,7 +195,7 @@ function planBg(el) {
   };
   if (img === "none" && light(bg)) return bg.a < 0.95 ? "overlay" : "solid";
   if (img.startsWith("linear-gradient") && !img.includes("url(")) {
-    if (light(parse(img.match(/rgba?\([^)]+\)/)?.[0]))) return "solid";
+    if (light(parse(img.match(/(?:rgba?|oklch|oklab|lab|lch|color|hwb|hsla?)\([^)]*\)/)?.[0]))) return "solid";
   }
   return null;
 }
@@ -162,6 +204,7 @@ function planBg(el) {
 // while dark mode is switched off (see resolveClear). Ancestors we already overrode
 // inline report their saved original. If that original was empty, the light color
 // came from a stylesheet, so lift our override for a moment to read it.
+// With nothing painted behind, the browser's white canvas shows: { ..., canvas: true }.
 function lightBgBehind(el) {
   const root = html();
   for (let e = el.parentElement; e && e !== root; e = e.parentElement) {
@@ -180,7 +223,18 @@ function lightBgBehind(el) {
     }
     if (c && c.a >= 0.5) return c;
   }
-  return { r: 255, g: 255, b: 255, a: 1 };
+  return { r: 255, g: 255, b: 255, a: 1, canvas: true };
+}
+
+// A light box straight on the browser canvas that fills most of the window is the
+// page background, painted on a wrapper instead of <body> (Workday's grey page is a
+// full-window <div>). It gets the page color, not the card color: cards on it stay
+// distinguishable, and in AMOLED mode the page is true black. Fixed and absolute
+// boxes are dialogs and menus, so they stay cards.
+function isPageBackground(el) {
+  const r = el.getBoundingClientRect();
+  return r.width >= innerWidth * 0.6 && r.height >= innerHeight * 0.6 &&
+    !["fixed", "absolute"].includes(getComputedStyle(el).position);
 }
 
 // Blocks pasted from editors often carry an inline `background-color: rgba(255,255,255,.9)`
@@ -203,6 +257,7 @@ function resolveClear(els, bgPlans) {
       const mix = (k) => own[k] * own.a + behind[k] * (1 - own.a); // composite over parent
       const diff = Math.abs(mix("r") - behind.r) + Math.abs(mix("g") - behind.g) + Math.abs(mix("b") - behind.b);
       if (diff < 24) bgPlans[i] = "clear";
+      else if (bgPlans[i] === "solid" && behind.canvas && isPageBackground(el)) bgPlans[i] = "page";
     }
   } finally {
     root.classList.add("lsu-dark");
@@ -216,8 +271,8 @@ function applyBg(el, kind) {
   } else if (kind === "clear") {
     setInline(el, "background-color", "transparent");
     setInline(el, "background-image", "none");
-  } else if (kind === "solid") {
-    setInline(el, "background-color", SURFACE);
+  } else if (kind === "solid" || kind === "page") {
+    setInline(el, "background-color", kind === "page" ? PAGE : SURFACE);
     setInline(el, "background-image", "none");
   } else {
     setInline(el, "background-color", OVERLAY);
@@ -253,6 +308,20 @@ function hasOwnText(el) {
   return false;
 }
 
+// The background we gave an element in Pass 1, or undefined if we didn't touch it.
+// null = we cleared it, so look further up. Used instead of the computed value
+// because that can lag: many sites (Workday: `transition: all .12s` on buttons and
+// grid cells) animate background-color, so right after we darken a cell it still
+// reads white, and the text on it would be judged against white.
+const SURFACE_RGB = { r: 30, g: 27, b: 38, a: 1 };
+const OURS = { page: PAGE_BG, solid: SURFACE_RGB, overlay: PAGE_BG, clear: null,
+  [PAGE]: PAGE_BG, [SURFACE]: SURFACE_RGB, [OVERLAY]: PAGE_BG, transparent: null };
+function ourBg(e) {
+  if (e.dataset.dmBg) return OURS[e.dataset.dmBg];
+  if (e.dataset.dmInline?.includes('"background-color"')) return OURS[e.style.getPropertyValue("background-color")];
+  return undefined;
+}
+
 function makeBgFinder() {
   const cache = new Map();
   const root = html();
@@ -262,6 +331,9 @@ function makeBgFinder() {
     for (let e = el; e && e !== root; e = e.parentElement) {
       if (cache.has(e)) { result = cache.get(e); break; }
       path.push(e);
+      const own = ourBg(e);
+      if (own) { result = own; break; }
+      if (own === null) continue;
       const cs = getComputedStyle(e);
       if (cs.backgroundImage.includes("url(")) { result = null; break; } // text over a photo: leave it
       const c = parse(cs.backgroundColor);
@@ -272,51 +344,72 @@ function makeBgFinder() {
   };
 }
 
-// The color we currently force on `el`, as an rgbKey, or undefined if none.
-function currentFix(el) {
-  if (el.dataset.dmC !== undefined) return colorKeys[el.dataset.dmC];
-  if (el.dataset.dmInline?.includes('"color"')) return el.style.getPropertyValue("color");
+// The color we currently force on `el` for `prop`, as an rgbKey, or undefined if none.
+function currentFix(el, prop) {
+  const id = el.dataset[PAINTS[prop].id];
+  if (id !== undefined) return colorKeys[id];
+  if (el.dataset.dmInline?.includes(`"${prop}"`)) return el.style.getPropertyValue(prop);
   return undefined;
 }
 
-// Returns undefined for "leave as is", or { src, out }: the text's own color and the
-// replacement it needs (out = null: it no longer needs one, so drop our fix).
-function planFg(el, effectiveBg) {
-  if (!hasOwnText(el)) return undefined;
-  const fixed = currentFix(el);
-  let src;
-  if (fixed !== undefined) {
+// Returns undefined for "leave as is", or { el, prop, src, out }: the element's own
+// color and the replacement it needs (out = null: it no longer needs one, so drop
+// our fix). `prop` is a key of PAINTS.
+// The element's own color for `prop`, as the page set it, or null if there is none
+// to judge (fill "none" or "url(#gradient)", or nearly transparent).
+function originalPaint(el, prop) {
+  if (currentFix(el, prop) !== undefined) {
     // Already fixed: judge the *original* color we saved, never the live one. A
     // rescan during a color transition (hover fades, .btn has `transition: color`)
     // would read an in-between color and chase it.
-    if (!el.dataset.dmSrc) return undefined;
-    const [r, g, b] = el.dataset.dmSrc.split(",").map(Number);
-    src = { r, g, b, a: 1 };
-  } else {
-    src = parse(getComputedStyle(el).color);
-    if (!src || src.a < 0.3) return undefined;
+    const saved = el.dataset[PAINTS[prop].src];
+    if (!saved) return null;
+    const [r, g, b] = saved.split(",").map(Number);
+    return { r, g, b, a: 1 };
   }
-  // Re-checked on every scan, so a fix follows its background: a section that turns
-  // light gets its original text color back, and one that turns dark gets a new fix.
-  const bg = effectiveBg(el);
-  const ok = !bg || luminance(bg) > 0.4 || contrast(src, bg) >= MIN_CONTRAST; // light chip: own text is fine
-  const out = ok ? null : fixText(src, bg);
-  if ((out ? rgbKey(out) : undefined) === fixed) return undefined;
-  return { src, out };
+  const c = parse(getComputedStyle(el)[prop]);
+  return c && c.a >= 0.3 ? c : null;
 }
 
-function applyFg(el, { src, out }) {
+// Returns undefined for "leave as is", or { el, prop, src, out }: the element's own
+// color and the replacement it needs (out = null: it no longer needs one, so drop
+// our fix). `prop` is a key of PAINTS.
+function planPaint(el, prop, effectiveBg) {
+  const P = PAINTS[prop];
+  const fixed = currentFix(el, prop);
+  const src = originalPaint(el, prop);
+  if (!src) return undefined;
+  // Re-checked on every scan, so a fix follows its background: a section that turns
+  // light gets its original color back, and one that turns dark gets a new fix.
+  const bg = effectiveBg(el);
+  let ok = !bg || luminance(bg) > 0.4 || contrast(src, bg) >= P.min; // light chip: own color is fine
+  if (!ok && prop !== "color") {
+    // A shape whose other paint already stands out is drawn by that one: a light
+    // outline around a dark interior (Snap's feed icons) stays an outline, rather
+    // than becoming a solid light blob.
+    const other = prop === "fill" ? "stroke" : "fill";
+    const o = originalPaint(el, other);
+    const drawn = other === "fill" || parseFloat(getComputedStyle(el).strokeWidth) > 0;
+    ok = !!o && drawn && contrast(o, bg) >= P.min;
+  }
+  const out = ok ? null : fixText(src, bg);
+  if ((out ? rgbKey(out) : undefined) === fixed) return undefined;
+  return { el, prop, src, out };
+}
+
+function applyPaint({ el, prop, src, out }) {
+  const P = PAINTS[prop];
   if (!out) {
-    delete el.dataset.dmC;
-    delete el.dataset.dmSrc;
-    unsetInline(el, "color");
+    delete el.dataset[P.id];
+    delete el.dataset[P.src];
+    unsetInline(el, prop);
     return;
   }
-  el.dataset.dmSrc = `${src.r},${src.g},${src.b}`;
+  el.dataset[P.src] = `${src.r},${src.g},${src.b}`;
   // Keep using whichever mechanism the element already has (see the top of the file)
-  const viaData = el.dataset.dmC !== undefined || (currentFix(el) === undefined && !el.hasAttribute("style"));
-  if (viaData) el.dataset.dmC = colorId(out);
-  else setInline(el, "color", rgbKey(out));
+  const viaData = el.dataset[P.id] !== undefined || (currentFix(el, prop) === undefined && !el.hasAttribute("style"));
+  if (viaData) el.dataset[P.id] = colorId(out, prop);
+  else setInline(el, prop, rgbKey(out));
 }
 
 // `freeze`: for full-page scans right after dark mode switches on. Snap animates
@@ -343,7 +436,10 @@ function scan(node, { freeze = false } = {}) {
 }
 
 function scanElements(node) {
-  const els = [node, ...node.querySelectorAll("*")].filter((el) => !SKIP.has(el.tagName) && !el.closest("svg"));
+  const all = [node, ...node.querySelectorAll("*")];
+  const els = all.filter((el) => !SKIP.has(el.tagName) && !el.closest("svg"));
+  // Icon shapes (<path>, <circle>, ...): only their fill and stroke are checked
+  const shapes = all.filter((el) => el instanceof SVGGeometryElement);
   // Read everything, then write, so the browser doesn't recalc styles per element.
   const bgPlans = els.map(planBg);
   resolveClear(els, bgPlans);
@@ -353,8 +449,11 @@ function scanElements(node) {
     if (bdPlans[i]) applyBorders(el, bdPlans[i]);
   });
   const effectiveBg = makeBgFinder();
-  const fgPlans = els.map((el) => planFg(el, effectiveBg));
-  els.forEach((el, i) => fgPlans[i] && applyFg(el, fgPlans[i]));
+  const fgPlans = [
+    ...els.filter(hasOwnText).map((el) => planPaint(el, "color", effectiveBg)),
+    ...shapes.flatMap((el) => [planPaint(el, "fill", effectiveBg), planPaint(el, "stroke", effectiveBg)]),
+  ];
+  fgPlans.forEach((plan) => plan && applyPaint(plan));
 }
 
 function restoreAll() {
@@ -366,8 +465,11 @@ function restoreAll() {
     delete el.dataset.dmInline;
   });
   document.querySelectorAll("[data-dm-bg]").forEach((el) => delete el.dataset.dmBg);
-  document.querySelectorAll("[data-dm-c]").forEach((el) => delete el.dataset.dmC);
-  document.querySelectorAll("[data-dm-src]").forEach((el) => delete el.dataset.dmSrc);
+  for (const { id, src, attr } of Object.values(PAINTS)) {
+    // Inline fixes have only the `src` key (dmSrc -> data-dm-src)
+    const srcAttr = "data-" + src.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase());
+    document.querySelectorAll(`[${attr}], [${srcAttr}]`).forEach((el) => { delete el.dataset[id]; delete el.dataset[src]; });
+  }
   document.querySelectorAll("[data-dm-bd]").forEach((el) => delete el.dataset.dmBd);
 }
 
