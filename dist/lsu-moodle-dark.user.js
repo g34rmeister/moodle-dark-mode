@@ -1,10 +1,14 @@
 // ==UserScript==
 // @name         LSU Moodle Dark (Unofficial)
 // @namespace    lsu-moodle-dark
-// @version      1.1.1
+// @version      1.2.0
 // @description  Unofficial dark and AMOLED theme for LSU Moodle, with automatic contrast fixes. Not affiliated with LSU (userscript build for mobile browsers)
 // @match        https://moodle.lsu.edu/*
 // @run-at       document-start
+// @homepageURL  https://github.com/g34rmeister/moodle-dark-mode
+// @supportURL   https://github.com/g34rmeister/moodle-dark-mode/issues
+// @updateURL    https://raw.githubusercontent.com/g34rmeister/moodle-dark-mode/main/dist/lsu-moodle-dark.user.js
+// @downloadURL  https://raw.githubusercontent.com/g34rmeister/moodle-dark-mode/main/dist/lsu-moodle-dark.user.js
 // @grant        GM_registerMenuCommand
 // @grant        GM.registerMenuCommand
 // ==/UserScript==
@@ -45,13 +49,46 @@ window.addEventListener("storage", (e) => {
 // ---------- stylesheet (the extension injects this via the manifest) ----------
 const style = document.createElement("style");
 style.id = "lsu-moodle-dark-css";
-style.textContent = "\n/* All rules are nested under html.lsu-dark so the popup toggle can switch them off */\nhtml.lsu-dark {\n\n  & {\n    --dm-bg:        #15131b;\n    --dm-surface:   #1e1b26;\n    --dm-surface-2: #282432;\n    --dm-border:    #3a3548;\n    --dm-text:      #e7e4ee;\n    --dm-muted:     #a8a2b8;\n    --dm-link:      #bfa8f5;   /* LSU purple, lifted for contrast */\n    --dm-link-hov:  #fdd023;   /* LSU gold */\n    --dm-primary:   #6d4fc4;\n    --dm-overlay:   rgba(21, 19, 27, 0.8);  /* translucent panels over photos */\n    color-scheme: dark;\n  }\n\n  /* AMOLED: true-black page (pixels off on OLED screens). Surfaces stay just above\n     black so cards remain distinguishable, and borders carry more of the structure. */\n  &.lsu-amoled {\n    --dm-bg:        #000000;\n    --dm-surface:   #0b0a0f;\n    --dm-surface-2: #16141c;\n    --dm-border:    #2c2836;\n    --dm-overlay:   rgba(0, 0, 0, 0.75);\n  }\n\n  /* ---------- Page base ---------- */\n  &, body, #page, #page-wrapper, #page-content, #region-main,\n  #region-main-box, .main-inner, #topofscroll, .pagelayout-frontpage #page {\n    background-color: var(--dm-bg) !important;\n    background-image: none !important; /* Snap puts a light gradient on body */\n    color: var(--dm-text) !important;\n  }\n\n  a { color: var(--dm-link) !important; }\n  a:hover { color: var(--dm-link-hov) !important; }\n\n  h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6,\n  .page-header-headings, .sectionname, .coursename, .instancename {\n    color: var(--dm-text) !important;\n  }\n\n  .text-muted, .dimmed_text, .dimmed, small, .small,\n  .activity-dates, .description, .summary .text-muted {\n    color: var(--dm-muted) !important;\n  }\n  /* ...but small text inside a status color (e.g. the green \"Highlighted\" label in\n     the course contents) keeps that color, as in light mode */\n  :is(.text-success, .text-danger, .text-warning, .text-info) :is(small, .small) {\n    color: inherit !important;\n  }\n\n  hr { border-color: var(--dm-border) !important; }\n\n  /* Kill every flavor of \"white/light background\" utility */\n  .bg-white, .bg-light, .bg-gray, [class*=\"bg-light\"],\n  .jumbotron, .well {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n  }\n\n  /* ---------- Top navbar ---------- */\n  /* No background override: LSU's custom-menu navbar is already LSU purple, and\n     any navbar that is white gets darkened by content.js */\n  .navbar .nav-link, .navbar a, .navbar .btn, .navbar .icon,\n  .usermenu .login, .popover-region-toggle .icon {\n    color: var(--dm-text) !important;\n  }\n  /* The purple LSU wordmark would vanish on dark \u2014 tint it light */\n  .navbar-brand img, .logo img, .navbar .logo {\n    filter: brightness(0) invert(0.9);\n  }\n\n  /* Secondary nav / tabs */\n  .secondary-navigation, .secondary-navigation .navigation,\n  .moremenu, .nav-tabs, .nav-pills {\n    background-color: var(--dm-bg) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .moremenu .nav-link, .nav-tabs .nav-link {\n    color: var(--dm-muted) !important;\n    background: transparent !important;\n    border-color: transparent !important;\n  }\n  .moremenu .nav-link.active, .nav-tabs .nav-link.active,\n  .moremenu .nav-link:hover, .nav-tabs .nav-link:hover {\n    color: var(--dm-text) !important;\n    border-bottom-color: var(--dm-link-hov) !important;\n  }\n\n  /* ---------- Drawers (course index, blocks) ---------- */\n  .drawer, .drawer-left, .drawer-right, .drawerheader,\n  #theme_boost-drawers-courseindex, #theme_boost-drawers-blocks,\n  .courseindex, .courseindex-section, .courseindex-item,\n  [data-region=\"drawer\"], #nav-drawer {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .courseindex .courseindex-item.pageitem,\n  .courseindex .courseindex-item:hover {\n    background-color: var(--dm-surface-2) !important;\n  }\n  .drawer-toggler .btn, .drawer-toggles .btn {\n    background-color: var(--dm-surface-2) !important;\n    color: var(--dm-text) !important;\n  }\n\n  /* ---------- Cards, blocks, course content ---------- */\n  /* Real cards get the raised surface color... */\n  .card, .block, .activity-item, .dashboard-card, .coursebox,\n  .course-summary-item, .list-group-item, .timeline-event-list-item,\n  .modal-content, .popover, .popover-region-container,\n  .content-item-container, .notification, #page-header {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n\n  /* ...but layout wrappers stay transparent. In light mode they are white-on-white\n     and invisible; painting them would add boxes that aren't really there. */\n  .card-body, .card-header, .card-footer, .card-text,\n  .block .content, .course-content, .course-section, .section,\n  .activity-wrapper, .activityinstance, .course-info-container,\n  .page-context-header, .box, .generalbox,\n  .frontpage-course-list-enrolled, .frontpage-course-list-all,\n  #frontpage-available-course-list, .event-name-container,\n  .modal-header, .modal-body, .modal-footer, .popover-body, .popover-header,\n  .popover-region-content-container, .popover-region-header-container,\n  .popover-region-footer-container, .settingsform, .mform fieldset {\n    background-color: transparent !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n\n  .activity-item:hover, .list-group-item-action:hover,\n  .course-summary-item:hover {\n    background-color: var(--dm-surface-2) !important;\n  }\n\n  .activity-item .activity-altcontent, .activity-description,\n  .no-overflow, .contentwithoutlink, .summarytext {\n    color: var(--dm-text) !important;\n  }\n\n  /* Completion / status badges */\n  .badge-light, .badge-secondary, .completion-info .btn,\n  .automatic-completion-conditions .badge {\n    background-color: var(--dm-surface-2) !important;\n    color: var(--dm-text) !important;\n  }\n\n  /* ---------- Dropdowns ---------- */\n  .dropdown-menu {\n    background-color: var(--dm-surface-2) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .dropdown-item, .dropdown-header { color: var(--dm-text) !important; }\n  .dropdown-item:hover, .dropdown-item:focus, .dropdown-item.active {\n    background-color: var(--dm-primary) !important;\n    color: #fff !important;\n  }\n  .dropdown-divider { border-color: var(--dm-border) !important; }\n\n  /* ---------- Forms & buttons ---------- */\n  .form-control, .custom-select, select, input, textarea,\n  .form-autocomplete-selection, .form-autocomplete-suggestions,\n  .input-group-text {\n    background-color: var(--dm-surface-2) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .form-control::placeholder, input::placeholder { color: var(--dm-muted) !important; }\n\n  .btn-secondary, .btn-light, .btn-outline-secondary, .btn-default,\n  .btn-link.btn-icon, .btn-footer-popover {\n    background-color: var(--dm-surface-2) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .btn-secondary:hover, .btn-light:hover, .btn-outline-secondary:hover {\n    background-color: var(--dm-border) !important;\n  }\n\n  /* ---------- Tables (gradebook etc.) ---------- */\n  table, .table, .generaltable, .gradereport-grader-table, .user-grade,\n  th, td, thead, tbody, tr {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .table-striped tbody tr:nth-of-type(odd),\n  .generaltable tbody tr:nth-of-type(odd) {\n    background-color: var(--dm-surface-2) !important;\n  }\n  .table-hover tbody tr:hover, .generaltable tbody tr:hover td {\n    background-color: var(--dm-border) !important;\n  }\n\n  /* ---------- Messaging drawer ---------- */\n  .message-app, .message-app .header-container, .message-app .footer-container,\n  .message-app .body-container, .message-app .panel-header-container,\n  .message-app .list-group, .message-app .view-overview-body,\n  .message-app .message.received {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .message-app .message.send {\n    background-color: var(--dm-primary) !important;\n    color: #fff !important;\n  }\n\n  /* ---------- Forums, quizzes, assignment ---------- */\n  .forumpost, .forum-post-container, .discussion-list,\n  .que .formulation, .que .outcome, .que .comment, .que .info,\n  .que .history, .submissionstatustable, .feedback,\n  .path-mod-quiz .othernav, #mod_quiz_navblock {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .que .formulation { background-color: #1f2a3a !important; } /* soft blue tint kept */\n  .que .outcome, .que .comment { background-color: #2e2a1a !important; }\n\n  /* ---------- Rich text editors ---------- */\n  .editor_atto_content, .editor_atto_toolbar, .editor_atto_content_wrap,\n  .tox .tox-edit-area__iframe, .tox .tox-toolbar, .tox .tox-toolbar__primary,\n  .tox .tox-menubar, .tox .tox-statusbar, .tox-tinymce {\n    background-color: var(--dm-surface-2) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .tox .tox-tbtn svg, .tox .tox-mbtn { fill: var(--dm-text) !important; color: var(--dm-text) !important; }\n\n  /* ---------- Calendar ---------- */\n  .calendarmonth td, .calendarmonth th, .maincalendar .calendar-controls,\n  .calendartable td.today .day-number-circle {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .calendarmonth td.today { background-color: var(--dm-surface-2) !important; }\n\n  /* ---------- Footer ---------- */\n  #page-footer, footer, .footer-dark, .footer-popover, .footer-section {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-muted) !important;\n    border-color: var(--dm-border) !important;\n  }\n\n  /* ---------- Media ---------- */\n  /* Tone down the big hero banner so it isn't a flashbang */\n  .headerbkg, .frontpage-hero, #page-header .card-body[style*=\"background\"],\n  .pagelayout-frontpage .page-header-image, [class*=\"hero\"] {\n    filter: brightness(0.75);\n  }\n  /* (No blanket image filter: Snap recolors its own icon images with `filter`,\n     e.g. `.snap-sidebar-menu-item img { filter: brightness(0) invert(1) }`) */\n  .snap-sidebar-menu-item img { filter: brightness(0) invert(0.9) !important; }\n\n  /* Activity icons: Snap draws a glyph in the <img> and tints it with a `filter` on\n     the container (PDF = blue, URL = grayscale). Make every glyph white so the\n     container's tint still works, and drop the light icon tile. */\n  .activityiconcontainer { background-color: transparent !important; }\n  .activityiconcontainer img.activityicon { filter: brightness(0) invert(1) !important; }\n\n  /* Other icon images (completion circles, etc.): invert + hue-rotate keeps outlines\n     as outlines, turns white fills dark, and preserves hue (green checks stay green).\n     A brightness(0) silhouette would turn outlined circles into solid blobs. */\n  img.icon:not(.activityicon) { filter: invert(1) hue-rotate(180deg); }\n  .fa, .icon.fa { color: var(--dm-text) !important; }\n\n  /* Scrollbars */\n  * { scrollbar-color: var(--dm-border) var(--dm-bg); }\n\n  /* ================= Snap theme (what LSU actually runs) ================= */\n\n  /* Top header bar + logo (logo is a background-image on #snap-home) */\n  #mr-nav, #snap-header {\n    background-color: var(--dm-surface) !important;\n    border-bottom: 1px solid var(--dm-border) !important;\n  }\n  /* (Rules for elements flagged by content.js are generated by content.js itself) */\n\n  /* Recolor the logo to LSU gold #FDD023 */\n  #snap-home {\n    filter: brightness(0) saturate(100%) invert(64%) sepia(62%) saturate(2982%)\n            hue-rotate(348deg) brightness(155%) contrast(99%) !important;\n  }\n\n  /* Breadcrumb pill (white box with purple links) */\n  /* One pill (the <nav>), like light mode \u2014 nothing painted inside it */\n  .breadcrumb-nav {\n    background-color: var(--dm-surface-2) !important;\n  }\n  .breadcrumb, .breadcrumb-item {\n    background-color: transparent !important;\n    color: var(--dm-muted) !important;\n  }\n  .breadcrumb-item + .breadcrumb-item::before { color: var(--dm-muted) !important; }\n\n  /* Inner-page header: Snap paints a light grey gradient behind the title */\n  body:not(.pagelayout-frontpage):not(.pagelayout-course):not(.pagelayout-incourse) #page-header {\n    background: var(--dm-surface) !important;\n    border-bottom: 1px solid var(--dm-border) !important;\n  }\n\n  /* Front-page hero only: translucent white welcome box -> translucent dark.\n     On every other page #page-mast is just the title row and must stay clear,\n     or it shows up as a dark bar across the header. */\n  .pagelayout-frontpage #page-mast {\n    background-color: var(--dm-overlay) !important;\n  }\n  body:not(.pagelayout-frontpage) #page-mast { background-color: transparent !important; }\n  #page-mast, #page-mast h1, #page-mast h1 a, #page-mast p,\n  #page-mast .text-muted {\n    color: var(--dm-text) !important;\n  }\n  /* Dim the banner photo without dimming the text on top of it */\n  .pagelayout-frontpage #page-header { box-shadow: inset 0 0 0 100vmax rgba(0, 0, 0, 0.2); }\n\n  /* Keyboard focus: Snap paints a white box behind focused links; with light link\n     text that is unreadable. Use an LSU-gold focus ring instead. */\n  a:focus, a.focus, .aalink:focus, .aalink.focus, a.autolink:focus {\n    background-color: transparent !important;\n    color: var(--dm-link) !important;\n    outline: 2px solid var(--dm-link-hov) !important;\n    outline-offset: 2px;\n    border-radius: 3px;\n    box-shadow: none !important;\n  }\n\n  /* Course contents search: the magnifier is a ::before image *behind* the round\n     input, so the input must stay see-through; the icon itself is dark purple. */\n  #toc-search-input {\n    background-color: transparent !important;\n    border-color: transparent !important; /* light mode: just the magnifier, no ring */\n  }\n  #toc-search-input:focus { border-color: var(--dm-border) !important; }\n  #toc-search::before { filter: brightness(0) invert(0.85); }\n\n  /* \"Highlighted\" section tag: light-mode pastel green -> LSU gold accent */\n  .snap-current-tag {\n    background-color: rgba(253, 208, 35, 0.1) !important;\n    color: var(--dm-link-hov) !important;\n    border-left: 3px solid var(--dm-link-hov) !important;\n  }\n  .snap-current-tag img, .snap-current-tag .icon {\n    filter: brightness(0) saturate(100%) invert(64%) sepia(62%) saturate(2982%)\n            hue-rotate(348deg) brightness(155%) contrast(99%) !important;\n  }\n\n  /* Activity/label cards: the white frame is the <li>, not the inner box */\n  li.snap-resource, li.snap-asset, li.activity, .snap-activity,\n  .asset-wrapper, .snap-asset-content {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n  }\n  .activityinstance { background-color: transparent !important; }\n\n  /* Section headings in Snap are grey #565656 */\n  .sectionname, h2.sectionname, .section-title {\n    color: var(--dm-text) !important;\n  }\n\n  /* LSU's purple icon PNGs vanish on dark \u2014 brighten them */\n  img.lsuicons { filter: brightness(2.2) saturate(0.9); }\n\n  /* Transparent diagrams (black lines) in course content need a light card */\n  .no-overflow img:not(.lsuicons):not(.icon):not(.userpicture) {\n    background-color: #eceaf2;\n    border-radius: 4px;\n  }\n\n  /* Course table of contents: in light mode it sits directly on the page with no\n     box of its own \u2014 keep it that way, or the text ends up flush against a card edge */\n  #course-toc, #chapters, #snap-course-tools {\n    background-color: transparent !important;\n  }\n\n  /* Personal menu (slide-out panel) */\n  #snap-pm, #snap-pm-content, .snap-pm-content,\n  #snap-pm-courses, #snap-pm-updates, #snap-pm-header,\n  .snap-sidebar-menu {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n\n  /* Footer */\n  #moodle-footer, #snap-site-footer, #snap-footer-content {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-muted) !important;\n  }\n}\n";
-(document.head || document.documentElement).appendChild(style);
+style.textContent = "\n/* All rules are nested under html.lsu-dark so the popup toggle can switch them off */\nhtml.lsu-dark {\n\n  & {\n    --dm-bg:        #15131b;\n    --dm-surface:   #1e1b26;\n    --dm-surface-2: #282432;\n    --dm-border:    #3a3548;\n    --dm-text:      #e7e4ee;\n    --dm-muted:     #a8a2b8;\n    --dm-link:      #bfa8f5;   /* LSU purple, lifted for contrast */\n    --dm-link-hov:  #fdd023;   /* LSU gold */\n    --dm-primary:   #6d4fc4;\n    --dm-overlay:   rgba(21, 19, 27, 0.8);  /* translucent panels over photos */\n    color-scheme: dark;\n  }\n\n  /* AMOLED: true-black page (pixels off on OLED screens). Surfaces stay just above\n     black so cards remain distinguishable, and borders carry more of the structure. */\n  &.lsu-amoled {\n    --dm-bg:        #000000;\n    --dm-surface:   #0b0a0f;\n    --dm-surface-2: #16141c;\n    --dm-border:    #2c2836;\n    --dm-overlay:   rgba(0, 0, 0, 0.75);\n  }\n\n  /* ---------- Page base ---------- */\n  &, body, #page, #page-wrapper, #page-content, #region-main,\n  #region-main-box, .main-inner, #topofscroll, .pagelayout-frontpage #page {\n    background-color: var(--dm-bg) !important;\n    background-image: none !important; /* Snap puts a light gradient on body */\n    color: var(--dm-text) !important;\n  }\n\n  a { color: var(--dm-link) !important; }\n  a:hover { color: var(--dm-link-hov) !important; }\n\n  h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6,\n  .page-header-headings, .sectionname, .coursename, .instancename {\n    color: var(--dm-text) !important;\n  }\n\n  .text-muted, .dimmed_text, .dimmed, small, .small,\n  .activity-dates, .description, .summary .text-muted {\n    color: var(--dm-muted) !important;\n  }\n  /* ...but small text inside a status color (e.g. the green \"Highlighted\" label in\n     the course contents) keeps that color, as in light mode */\n  :is(.text-success, .text-danger, .text-warning, .text-info) :is(small, .small) {\n    color: inherit !important;\n  }\n\n  hr { border-color: var(--dm-border) !important; }\n\n  /* Kill every flavor of \"white/light background\" utility */\n  .bg-white, .bg-light, .bg-gray, [class*=\"bg-light\"],\n  .jumbotron, .well {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n  }\n\n  /* ---------- Top navbar ---------- */\n  /* No background override: LSU's custom-menu navbar is already LSU purple, and\n     any navbar that is white gets darkened by content.js */\n  .navbar .nav-link, .navbar a, .navbar .btn, .navbar .icon,\n  .usermenu .login, .popover-region-toggle .icon {\n    color: var(--dm-text) !important;\n  }\n  /* The purple LSU wordmark would vanish on dark \u2014 tint it light */\n  .navbar-brand img, .logo img, .navbar .logo {\n    filter: brightness(0) invert(0.9);\n  }\n\n  /* Secondary nav / tabs. (.secondary-navigation and .moremenu are Moodle 4 Boost\n     markup; Snap keeps its own navigation, so on LSU only .nav-tabs/.nav-pills apply.) */\n  .secondary-navigation, .secondary-navigation .navigation,\n  .moremenu, .nav-tabs, .nav-pills {\n    background-color: var(--dm-bg) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .moremenu .nav-link, .nav-tabs .nav-link {\n    color: var(--dm-muted) !important;\n    background: transparent !important;\n    border-color: transparent !important;\n  }\n  .moremenu .nav-link.active, .nav-tabs .nav-link.active,\n  .moremenu .nav-link:hover, .nav-tabs .nav-link:hover {\n    color: var(--dm-text) !important;\n    border-bottom-color: var(--dm-link-hov) !important;\n  }\n\n  /* ---------- Drawers (course index, blocks) ---------- */\n  /* Boost fallback: Moodle 4's course index and drawers. Snap did not adopt them (it\n     has #course-toc and the personal menu, styled further down), so these rules only\n     matter if LSU ever switches theme. */\n  .drawer, .drawer-left, .drawer-right, .drawerheader,\n  #theme_boost-drawers-courseindex, #theme_boost-drawers-blocks,\n  .courseindex, .courseindex-section, .courseindex-item,\n  [data-region=\"drawer\"], #nav-drawer {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .courseindex .courseindex-item.pageitem,\n  .courseindex .courseindex-item:hover {\n    background-color: var(--dm-surface-2) !important;\n  }\n  .drawer-toggler .btn, .drawer-toggles .btn {\n    background-color: var(--dm-surface-2) !important;\n    color: var(--dm-text) !important;\n  }\n\n  /* ---------- Cards, blocks, course content ---------- */\n  /* Real cards get the raised surface color... */\n  .card, .block, .activity-item, .dashboard-card, .coursebox,\n  .course-summary-item, .list-group-item, .timeline-event-list-item,\n  .modal-content, .popover, .popover-region-container,\n  .content-item-container, .notification, #page-header {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n\n  /* ...but layout wrappers stay transparent. In light mode they are white-on-white\n     and invisible; painting them would add boxes that aren't really there. */\n  .card-body, .card-header, .card-footer, .card-text,\n  .block .content, .course-content, .course-section, .section,\n  .activity-wrapper, .activityinstance, .course-info-container,\n  .page-context-header, .box, .generalbox,\n  .frontpage-course-list-enrolled, .frontpage-course-list-all,\n  #frontpage-available-course-list, .event-name-container,\n  .modal-header, .modal-body, .modal-footer, .popover-body, .popover-header,\n  .popover-region-content-container, .popover-region-header-container,\n  .popover-region-footer-container, .settingsform, .mform fieldset {\n    background-color: transparent !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n\n  .activity-item:hover, .list-group-item-action:hover,\n  .course-summary-item:hover {\n    background-color: var(--dm-surface-2) !important;\n  }\n\n  .activity-item .activity-altcontent, .activity-description,\n  .no-overflow, .contentwithoutlink, .summarytext {\n    color: var(--dm-text) !important;\n  }\n\n  /* Completion / status badges */\n  .badge-light, .badge-secondary, .completion-info .btn,\n  .automatic-completion-conditions .badge {\n    background-color: var(--dm-surface-2) !important;\n    color: var(--dm-text) !important;\n  }\n\n  /* ---------- Dropdowns ---------- */\n  .dropdown-menu {\n    background-color: var(--dm-surface-2) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .dropdown-item, .dropdown-header { color: var(--dm-text) !important; }\n  .dropdown-item:hover, .dropdown-item:focus, .dropdown-item.active {\n    background-color: var(--dm-primary) !important;\n    color: #fff !important;\n  }\n  .dropdown-divider { border-color: var(--dm-border) !important; }\n\n  /* ---------- Forms & buttons ---------- */\n  .form-control, .custom-select, select, input, textarea,\n  .form-autocomplete-selection, .form-autocomplete-suggestions,\n  .input-group-text {\n    background-color: var(--dm-surface-2) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .form-control::placeholder, input::placeholder { color: var(--dm-muted) !important; }\n\n  .btn-secondary, .btn-light, .btn-outline-secondary, .btn-default,\n  .btn-link.btn-icon, .btn-footer-popover {\n    background-color: var(--dm-surface-2) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .btn-secondary:hover, .btn-light:hover, .btn-outline-secondary:hover {\n    background-color: var(--dm-border) !important;\n  }\n\n  /* ---------- Tables (gradebook etc.) ---------- */\n  table, .table, .generaltable, .gradereport-grader-table, .user-grade,\n  th, td, thead, tbody, tr {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .table-striped tbody tr:nth-of-type(odd),\n  .generaltable tbody tr:nth-of-type(odd) {\n    background-color: var(--dm-surface-2) !important;\n  }\n  .table-hover tbody tr:hover, .generaltable tbody tr:hover td {\n    background-color: var(--dm-border) !important;\n  }\n\n  /* ---------- Messaging drawer ---------- */\n  .message-app, .message-app .header-container, .message-app .footer-container,\n  .message-app .body-container, .message-app .panel-header-container,\n  .message-app .list-group, .message-app .view-overview-body,\n  .message-app .message.received {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .message-app .message.send {\n    background-color: var(--dm-primary) !important;\n    color: #fff !important;\n  }\n\n  /* ---------- Forums, quizzes, assignment ---------- */\n  .forumpost, .forum-post-container, .discussion-list,\n  .que .formulation, .que .outcome, .que .comment, .que .info,\n  .que .history, .submissionstatustable, .feedback,\n  .path-mod-quiz .othernav, #mod_quiz_navblock {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .que .formulation { background-color: #1f2a3a !important; } /* soft blue tint kept */\n  .que .outcome, .que .comment { background-color: #2e2a1a !important; }\n\n  /* ---------- Rich text editors ---------- */\n  .editor_atto_content, .editor_atto_toolbar, .editor_atto_content_wrap,\n  .tox .tox-edit-area__iframe, .tox .tox-toolbar, .tox .tox-toolbar__primary,\n  .tox .tox-menubar, .tox .tox-statusbar, .tox-tinymce {\n    background-color: var(--dm-surface-2) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .tox .tox-tbtn svg, .tox .tox-mbtn { fill: var(--dm-text) !important; color: var(--dm-text) !important; }\n  /* The text area itself (Moodle 4.1+ TinyMCE). It is a separate iframe document that\n     loads Moodle's editor stylesheet; this file reaches it because the manifest sets\n     match_about_blank. Match the field color rather than the page color. */\n  & body#tinymce, & body.mce-content-body {\n    background-color: var(--dm-surface-2) !important;\n    color: var(--dm-text) !important;\n  }\n  & body.mce-content-body[data-mce-placeholder]:not(.mce-visualblocks)::before {\n    color: var(--dm-muted) !important;\n  }\n\n  /* ---------- Calendar ---------- */\n  .calendarmonth td, .calendarmonth th, .maincalendar .calendar-controls,\n  .calendartable td.today .day-number-circle {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n  .calendarmonth td.today { background-color: var(--dm-surface-2) !important; }\n\n  /* ---------- Footer ---------- */\n  #page-footer, footer, .footer-dark, .footer-popover, .footer-section {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-muted) !important;\n    border-color: var(--dm-border) !important;\n  }\n\n  /* ---------- Media ---------- */\n  /* Tone down the big hero banner so it isn't a flashbang */\n  .headerbkg, .frontpage-hero, #page-header .card-body[style*=\"background\"],\n  .pagelayout-frontpage .page-header-image, [class*=\"hero\"] {\n    filter: brightness(0.75);\n  }\n  /* (No blanket image filter: Snap recolors its own icon images with `filter`,\n     e.g. `.snap-sidebar-menu-item img { filter: brightness(0) invert(1) }`) */\n  .snap-sidebar-menu-item img { filter: brightness(0) invert(0.9) !important; }\n\n  /* Activity icons: Snap draws a glyph in the <img> and tints it with a `filter` on\n     the container (PDF = blue, URL = grayscale). Make every glyph white so the\n     container's tint still works, and drop the light icon tile. */\n  .activityiconcontainer { background-color: transparent !important; }\n  .activityiconcontainer img.activityicon { filter: brightness(0) invert(1) !important; }\n\n  /* Other icon images (completion circles, etc.): invert + hue-rotate keeps outlines\n     as outlines, turns white fills dark, and preserves hue (green checks stay green).\n     A brightness(0) silhouette would turn outlined circles into solid blobs. */\n  img.icon:not(.activityicon) { filter: invert(1) hue-rotate(180deg); }\n  .fa, .icon.fa { color: var(--dm-text) !important; }\n\n  /* Scrollbars */\n  * { scrollbar-color: var(--dm-border) var(--dm-bg); }\n\n  /* ================= Snap theme (what LSU actually runs) ================= */\n\n  /* Top header bar + logo (logo is a background-image on #snap-home) */\n  #mr-nav, #snap-header {\n    background-color: var(--dm-surface) !important;\n    border-bottom: 1px solid var(--dm-border) !important;\n  }\n  /* (Rules for elements flagged by content.js are generated by content.js itself) */\n\n  /* Recolor the logo to LSU gold #FDD023 */\n  #snap-home {\n    filter: brightness(0) saturate(100%) invert(64%) sepia(62%) saturate(2982%)\n            hue-rotate(348deg) brightness(155%) contrast(99%) !important;\n  }\n\n  /* Breadcrumb pill (white box with purple links) */\n  /* One pill (the <nav>), like light mode \u2014 nothing painted inside it */\n  .breadcrumb-nav {\n    background-color: var(--dm-surface-2) !important;\n  }\n  .breadcrumb, .breadcrumb-item {\n    background-color: transparent !important;\n    color: var(--dm-muted) !important;\n  }\n  .breadcrumb-item + .breadcrumb-item::before { color: var(--dm-muted) !important; }\n\n  /* Inner-page header: Snap paints a light grey gradient behind the title */\n  body:not(.pagelayout-frontpage):not(.pagelayout-course):not(.pagelayout-incourse) #page-header {\n    background: var(--dm-surface) !important;\n    border-bottom: 1px solid var(--dm-border) !important;\n  }\n\n  /* Front-page hero only: translucent white welcome box -> translucent dark.\n     On every other page #page-mast is just the title row and must stay clear,\n     or it shows up as a dark bar across the header. */\n  .pagelayout-frontpage #page-mast {\n    background-color: var(--dm-overlay) !important;\n  }\n  body:not(.pagelayout-frontpage) #page-mast { background-color: transparent !important; }\n  #page-mast, #page-mast h1, #page-mast h1 a, #page-mast p,\n  #page-mast .text-muted {\n    color: var(--dm-text) !important;\n  }\n  /* Dim the banner photo without dimming the text on top of it */\n  .pagelayout-frontpage #page-header { box-shadow: inset 0 0 0 100vmax rgba(0, 0, 0, 0.2); }\n\n  /* Keyboard focus: Snap paints a white box behind focused links; with light link\n     text that is unreadable. Use an LSU-gold focus ring instead. */\n  a:focus, a.focus, .aalink:focus, .aalink.focus, a.autolink:focus {\n    background-color: transparent !important;\n    color: var(--dm-link) !important;\n    outline: 2px solid var(--dm-link-hov) !important;\n    outline-offset: 2px;\n    border-radius: 3px;\n    box-shadow: none !important;\n  }\n\n  /* Course contents search: the magnifier is a ::before image *behind* the round\n     input, so the input must stay see-through; the icon itself is dark purple. */\n  #toc-search-input {\n    background-color: transparent !important;\n    border-color: transparent !important; /* light mode: just the magnifier, no ring */\n  }\n  #toc-search-input:focus { border-color: var(--dm-border) !important; }\n  #toc-search::before { filter: brightness(0) invert(0.85); }\n\n  /* \"Highlighted\" section tag: light-mode pastel green -> LSU gold accent */\n  .snap-current-tag {\n    background-color: rgba(253, 208, 35, 0.1) !important;\n    color: var(--dm-link-hov) !important;\n    border-left: 3px solid var(--dm-link-hov) !important;\n  }\n  .snap-current-tag img, .snap-current-tag .icon {\n    filter: brightness(0) saturate(100%) invert(64%) sepia(62%) saturate(2982%)\n            hue-rotate(348deg) brightness(155%) contrast(99%) !important;\n  }\n\n  /* Activity/label cards: the white frame is the <li>, not the inner box */\n  li.snap-resource, li.snap-asset, li.activity, .snap-activity,\n  .asset-wrapper, .snap-asset-content {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n  }\n  .activityinstance { background-color: transparent !important; }\n\n  /* Section headings in Snap are grey #565656 */\n  .sectionname, h2.sectionname, .section-title {\n    color: var(--dm-text) !important;\n  }\n\n  /* LSU's purple icon PNGs vanish on dark \u2014 brighten them */\n  img.lsuicons { filter: brightness(2.2) saturate(0.9); }\n\n  /* Transparent diagrams (black lines) in course content need a light card */\n  .no-overflow img:not(.lsuicons):not(.icon):not(.userpicture) {\n    background-color: #eceaf2;\n    border-radius: 4px;\n  }\n\n  /* Course-card quick links (LSU's Mail / Grades / Users / Course Tools icons over\n     the course image). In light mode they sit on a light chip; going transparent\n     leaves white glyphs on a photo. Give them an opaque dark chip with gold icons. */\n  .cc_quick_link {\n    background-color: var(--dm-surface) !important;\n    border: 1px solid var(--dm-border) !important;\n    border-radius: 8px;\n    padding: 2px 6px;\n    opacity: 1 !important;\n  }\n  .cc_quick_link a, .cc_quick_link .cc_quick_link_icon {\n    color: var(--dm-link-hov) !important;\n    opacity: 1 !important;\n  }\n  .cc_quick_link a:hover .cc_quick_link_icon,\n  .cc_quick_link a:focus .cc_quick_link_icon {\n    color: var(--dm-text) !important;\n  }\n\n  /* Course table of contents: in light mode it sits directly on the page with no\n     box of its own \u2014 keep it that way, or the text ends up flush against a card edge */\n  #course-toc, #chapters, #snap-course-tools {\n    background-color: transparent !important;\n  }\n\n  /* Personal menu (slide-out panel) */\n  #snap-pm, #snap-pm-content, .snap-pm-content,\n  #snap-pm-courses, #snap-pm-updates, #snap-pm-header,\n  .snap-sidebar-menu {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-text) !important;\n    border-color: var(--dm-border) !important;\n  }\n\n  /* Footer */\n  #moodle-footer, #snap-site-footer, #snap-footer-content {\n    background-color: var(--dm-surface) !important;\n    color: var(--dm-muted) !important;\n  }\n}\n";
+// At document-start some engines (WebKit/Safari) run us before <html> exists, and
+// in an editor iframe the page's document.open/write later replaces <html> along
+// with this <style>. So (re)attach it whenever it is missing. content.js does the
+// same for its classes (see handleMutations).
+const attachStyle = () => {
+  if (!style.isConnected && document.documentElement) (document.head || document.documentElement).appendChild(style);
+};
+attachStyle();
+new MutationObserver(attachStyle).observe(document, { childList: true });
 
 // ---------- content.js ----------
-// Turn dark mode on immediately to avoid a white flash, then honor the saved setting.
-const root = document.documentElement;
-root.classList.add("lsu-dark");
+// Settings: `enabled` is the master switch; `auto` makes it follow the system's
+// light/dark preference; `amoled` picks the true-black palette.
+const DEFAULTS = { enabled: true, auto: false, amoled: false };
+
+// chrome.storage answers asynchronously, after the page has started to paint. To
+// avoid a flash of the wrong theme, start from a copy of the last settings kept in
+// the site's localStorage (read synchronously), then correct it if storage differs.
+const CACHE_KEY = "lsu-moodle-dark-cache";
+const state = { ...DEFAULTS };
+try { Object.assign(state, JSON.parse(localStorage.getItem(CACHE_KEY))); } catch {}
+function saveCache() {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(state)); } catch {}
+}
+
+const systemDark = matchMedia("(prefers-color-scheme: dark)");
+const isDark = () => state.enabled && (!state.auto || systemDark.matches);
+
+// The <html> element is looked up each time rather than kept: in TinyMCE's editor
+// iframe (Moodle 4.1+), the page rewrites the document with document.open/write after
+// we start, which replaces <html>. `state` is what gets re-applied to the new one.
+const html = () => document.documentElement;
+function syncRootClasses() {
+  const root = html();
+  if (!root) return;
+  root.classList.toggle("lsu-dark", isDark());
+  root.classList.toggle("lsu-amoled", state.amoled);
+}
+syncRootClasses();
 
 // dark.css handles the known parts of the page. This script is the safety net for
 // everything else. It reads each element's *computed* colors and:
@@ -120,16 +157,19 @@ function fixText(c, bg) {
 // ---------- Generated rules for elements without a style attribute ----------
 const sheet = document.createElement("style");
 const colorIds = new Map();
-function colorId({ r, g, b }) {
-  const key = `rgb(${r}, ${g}, ${b})`;
+const colorKeys = []; // id -> key, the reverse of colorIds
+const rgbKey = ({ r, g, b }) => `rgb(${r}, ${g}, ${b})`;
+function colorId(c) {
+  const key = rgbKey(c);
   if (!colorIds.has(key)) {
-    colorIds.set(key, colorIds.size);
-    sheet.textContent += `html.lsu-dark [data-dm-c="${colorIds.size - 1}"]${HI} { color: ${key} !important; }\n`;
+    colorIds.set(key, colorKeys.length);
+    colorKeys.push(key);
+    sheet.textContent += `html.lsu-dark [data-dm-c="${colorIds.get(key)}"]${HI} { color: ${key} !important; }\n`;
   }
   return colorIds.get(key);
 }
 function ensureSheet() {
-  if (!sheet.isConnected) (document.head || root).appendChild(sheet);
+  if (!sheet.isConnected) (document.head || html()).appendChild(sheet);
 }
 const SIDES = { t: "top", r: "right", b: "bottom", l: "left" };
 sheet.textContent =
@@ -147,6 +187,19 @@ function setInline(el, prop, value) {
   if (!(prop in saved)) saved[prop] = [el.style.getPropertyValue(prop), el.style.getPropertyPriority(prop)];
   el.dataset.dmInline = JSON.stringify(saved);
   el.style.setProperty(prop, value, "important");
+}
+
+// Undo setInline for one property, restoring whatever inline value was there before.
+function unsetInline(el, prop) {
+  if (!el.dataset.dmInline) return;
+  const saved = JSON.parse(el.dataset.dmInline);
+  if (!(prop in saved)) return;
+  const [v, p] = saved[prop];
+  if (v) el.style.setProperty(prop, v, p);
+  else el.style.removeProperty(prop);
+  delete saved[prop];
+  if (Object.keys(saved).length) el.dataset.dmInline = JSON.stringify(saved);
+  else delete el.dataset.dmInline;
 }
 
 // ---------- Pass 1: backgrounds ----------
@@ -170,13 +223,24 @@ function planBg(el) {
 
 // Light-mode background behind `el`: the nearest ancestor with a solid color, read
 // while dark mode is switched off (see resolveClear). Ancestors we already overrode
-// inline report their saved original instead.
+// inline report their saved original. If that original was empty, the light color
+// came from a stylesheet, so lift our override for a moment to read it.
 function lightBgBehind(el) {
+  const root = html();
   for (let e = el.parentElement; e && e !== root; e = e.parentElement) {
     const saved = e.dataset.dmInline && JSON.parse(e.dataset.dmInline)["background-color"];
-    const cs = getComputedStyle(e);
-    if (!saved && cs.backgroundImage.includes("url(")) return null;
-    const c = parse(saved ? saved[0] : cs.backgroundColor);
+    let c;
+    if (saved && saved[0]) {
+      c = parse(saved[0]);
+    } else {
+      const ours = saved ? [e.style.getPropertyValue("background-color"), e.style.getPropertyPriority("background-color")] : null;
+      if (ours) e.style.removeProperty("background-color");
+      const cs = getComputedStyle(e);
+      const photo = cs.backgroundImage.includes("url(");
+      c = parse(cs.backgroundColor);
+      if (ours) e.style.setProperty("background-color", ...ours);
+      if (photo && !saved) return null;
+    }
     if (c && c.a >= 0.5) return c;
   }
   return { r: 255, g: 255, b: 255, a: 1 };
@@ -189,6 +253,7 @@ function lightBgBehind(el) {
 function resolveClear(els, bgPlans) {
   const idx = bgPlans.map((p, i) => (p ? i : -1)).filter((i) => i >= 0);
   if (!idx.length) return;
+  const root = html();
   const wasFrozen = root.classList.contains("lsu-dm-freeze");
   root.classList.add("lsu-dm-freeze"); // no transitions, so reads are immediate
   root.classList.remove("lsu-dark");   // no paint happens before we switch it back
@@ -253,6 +318,7 @@ function hasOwnText(el) {
 
 function makeBgFinder() {
   const cache = new Map();
+  const root = html();
   return function effectiveBg(el) {
     const path = [];
     let result = PAGE_BG;
@@ -269,22 +335,51 @@ function makeBgFinder() {
   };
 }
 
-function planFg(el, effectiveBg) {
-  // Already fixed: don't re-measure. A rescan during a color transition (hover
-  // fades, .btn has `transition: color`) would read an in-between color and chase it.
-  if (el.dataset.dmC !== undefined || el.dataset.dmInline?.includes('"color"')) return null;
-  if (!hasOwnText(el)) return null;
-  const c = parse(getComputedStyle(el).color);
-  if (!c || c.a < 0.3) return null;
-  const bg = effectiveBg(el);
-  if (!bg || luminance(bg) > 0.4) return null; // on a light/colored chip: its own text is fine
-  if (contrast(c, bg) >= MIN_CONTRAST) return null;
-  return fixText(c, bg);
+// The color we currently force on `el`, as an rgbKey, or undefined if none.
+function currentFix(el) {
+  if (el.dataset.dmC !== undefined) return colorKeys[el.dataset.dmC];
+  if (el.dataset.dmInline?.includes('"color"')) return el.style.getPropertyValue("color");
+  return undefined;
 }
 
-function applyFg(el, c) {
-  if (!el.hasAttribute("style")) el.dataset.dmC = colorId(c);
-  else setInline(el, "color", `rgb(${c.r}, ${c.g}, ${c.b})`);
+// Returns undefined for "leave as is", or { src, out }: the text's own color and the
+// replacement it needs (out = null: it no longer needs one, so drop our fix).
+function planFg(el, effectiveBg) {
+  if (!hasOwnText(el)) return undefined;
+  const fixed = currentFix(el);
+  let src;
+  if (fixed !== undefined) {
+    // Already fixed: judge the *original* color we saved, never the live one. A
+    // rescan during a color transition (hover fades, .btn has `transition: color`)
+    // would read an in-between color and chase it.
+    if (!el.dataset.dmSrc) return undefined;
+    const [r, g, b] = el.dataset.dmSrc.split(",").map(Number);
+    src = { r, g, b, a: 1 };
+  } else {
+    src = parse(getComputedStyle(el).color);
+    if (!src || src.a < 0.3) return undefined;
+  }
+  // Re-checked on every scan, so a fix follows its background: a section that turns
+  // light gets its original text color back, and one that turns dark gets a new fix.
+  const bg = effectiveBg(el);
+  const ok = !bg || luminance(bg) > 0.4 || contrast(src, bg) >= MIN_CONTRAST; // light chip: own text is fine
+  const out = ok ? null : fixText(src, bg);
+  if ((out ? rgbKey(out) : undefined) === fixed) return undefined;
+  return { src, out };
+}
+
+function applyFg(el, { src, out }) {
+  if (!out) {
+    delete el.dataset.dmC;
+    delete el.dataset.dmSrc;
+    unsetInline(el, "color");
+    return;
+  }
+  el.dataset.dmSrc = `${src.r},${src.g},${src.b}`;
+  // Keep using whichever mechanism the element already has (see the top of the file)
+  const viaData = el.dataset.dmC !== undefined || (currentFix(el) === undefined && !el.hasAttribute("style"));
+  if (viaData) el.dataset.dmC = colorId(out);
+  else setInline(el, "color", rgbKey(out));
 }
 
 // `freeze`: for full-page scans right after dark mode switches on. Snap animates
@@ -292,13 +387,21 @@ function applyFg(el, c) {
 // mark it as a card forever. Not used for routine scans, where cancelling transitions
 // would make drawers and menus jump instead of slide.
 function scan(node, { freeze = false } = {}) {
-  if (!root.classList.contains("lsu-dark") || !node || node.nodeType !== 1 || !node.isConnected) return;
+  const root = html();
+  if (!isDark() || !root || !node || node.nodeType !== 1 || !node.isConnected) return;
+  // Hand any page mutations that are still undelivered to the queue first, so that
+  // dropping the records our own writes create (below) can't swallow them.
+  handleMutations(observer.takeRecords());
   ensureSheet();
   if (freeze) root.classList.add("lsu-dm-freeze");
   try {
     scanElements(node);
   } finally {
     if (freeze) root.classList.remove("lsu-dm-freeze");
+    // Everything recorded since the call above is our own doing (inline overrides,
+    // the class flips in resolveClear). Rescanning for those would only re-measure
+    // elements we just fixed.
+    observer.takeRecords();
   }
 }
 
@@ -327,6 +430,7 @@ function restoreAll() {
   });
   document.querySelectorAll("[data-dm-bg]").forEach((el) => delete el.dataset.dmBg);
   document.querySelectorAll("[data-dm-c]").forEach((el) => delete el.dataset.dmC);
+  document.querySelectorAll("[data-dm-src]").forEach((el) => delete el.dataset.dmSrc);
   document.querySelectorAll("[data-dm-bd]").forEach((el) => delete el.dataset.dmBd);
 }
 
@@ -344,51 +448,80 @@ function queue(node) {
   }, 50);
 }
 
-new MutationObserver((mutations) => {
+function handleMutations(mutations) {
   for (const m of mutations) {
-    if (m.type === "childList") m.addedNodes.forEach((n) => n.nodeType === 1 && queue(n));
-    else if (m.target !== root) queue(m.target); // class/style change can restyle the whole subtree
+    if (m.type === "childList") {
+      // A new <html> (document.open/write in the editor iframe): put our classes back
+      if (m.target === document) syncRootClasses();
+      m.addedNodes.forEach((n) => n.nodeType === 1 && queue(n));
+    } else if (m.target === html()) {
+      // Our own flips are dropped in scan(); anything left is the page rewriting <html class>
+      const cl = m.target.classList;
+      if (cl.contains("lsu-dark") !== isDark() || cl.contains("lsu-amoled") !== state.amoled) syncRootClasses();
+    } else {
+      queue(m.target); // class/style change can restyle the whole subtree
+    }
   }
-}).observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class"] });
+}
+
+// Observe the document, not <html>: the document survives document.open, <html> doesn't.
+const observer = new MutationObserver(handleMutations);
+observer.observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class"] });
 
 // Mobile browsers tint their toolbar with <meta name="theme-color">; match the page.
 let originalThemeColor;
 function syncThemeColor() {
-  if (!document.head) return;
+  if (!document.head || window.top !== window) return;
   let meta = document.head.querySelector('meta[name="theme-color"]');
   if (originalThemeColor === undefined) originalThemeColor = meta ? meta.content : null;
-  const on = root.classList.contains("lsu-dark");
-  if (!on && originalThemeColor === null) { meta?.remove(); return; }
+  if (!isDark() && originalThemeColor === null) { meta?.remove(); return; }
   if (!meta) {
     meta = document.createElement("meta");
     meta.name = "theme-color";
     document.head.appendChild(meta);
   }
-  meta.content = on ? (root.classList.contains("lsu-amoled") ? "#000000" : "#1e1b26") : originalThemeColor;
+  meta.content = isDark() ? (state.amoled ? "#000000" : "#1e1b26") : originalThemeColor;
 }
 
-function applySettings({ enabled, amoled }) {
-  if (amoled !== undefined) root.classList.toggle("lsu-amoled", amoled);
-  if (enabled !== undefined) {
-    root.classList.toggle("lsu-dark", enabled);
-    if (enabled) document.body && scan(document.body, { freeze: true });
+// `applied`: whether the page is currently themed, so update() knows whether the
+// whole page needs a scan (turning on) or a restore (turning off).
+let applied = isDark();
+function update() {
+  syncRootClasses();
+  const now = isDark();
+  if (now !== applied) {
+    applied = now;
+    if (now) document.body && scan(document.body, { freeze: true });
     else restoreAll();
   }
   syncThemeColor();
 }
 
+function applySettings(settings) {
+  for (const k in DEFAULTS) if (settings[k] !== undefined) state[k] = settings[k];
+  saveCache();
+  update();
+}
+
+// Auto mode: follow the OS switching between light and dark (e.g. at sunset)
+systemDark.addEventListener("change", update);
+
 document.addEventListener("DOMContentLoaded", () => { scan(document.body, { freeze: true }); syncThemeColor(); });
 window.addEventListener("load", () => scan(document.body, { freeze: true }));
 
-chrome.storage.sync.get({ enabled: true, amoled: false }, applySettings);
+chrome.storage.sync.get(DEFAULTS, applySettings);
 
 chrome.storage.onChanged.addListener((changes) => {
-  applySettings({ enabled: changes.enabled?.newValue, amoled: changes.amoled?.newValue });
+  const settings = {};
+  for (const k in DEFAULTS) if (changes[k]) settings[k] = changes[k].newValue;
+  applySettings(settings);
 });
 
 // ---------- toggles (the extension uses its toolbar popup) ----------
-const settings = () => ({ enabled: true, amoled: false, ...readStore() });
-const toggleDark = () => chrome.storage.sync.set({ enabled: !settings().enabled });
+const settings = () => ({ ...DEFAULTS, ...readStore() }); // DEFAULTS: from content.js
+// Flips what you see right now (in Auto mode that also leaves Auto)
+const toggleDark = () => chrome.storage.sync.set({ enabled: !isDark(), auto: false });
+const toggleAuto = () => chrome.storage.sync.set({ auto: !settings().auto, enabled: true });
 const toggleAmoled = () => chrome.storage.sync.set({ amoled: !settings().amoled, enabled: true });
 const registerMenu =
   (typeof GM_registerMenuCommand === "function" && GM_registerMenuCommand) ||
@@ -397,6 +530,7 @@ if (window.top === window) {
   if (registerMenu) {
     registerMenu("Toggle dark mode", toggleDark);
     registerMenu("Toggle AMOLED black", toggleAmoled);
+    registerMenu("Toggle follow system (Auto)", toggleAuto);
   } else {
     // No menu API (e.g. iOS Userscripts): a small floating button.
     // Tap = dark on/off, long-press = AMOLED on/off.

@@ -73,7 +73,8 @@ html.lsu-dark {
     filter: brightness(0) invert(0.9);
   }
 
-  /* Secondary nav / tabs */
+  /* Secondary nav / tabs. (.secondary-navigation and .moremenu are Moodle 4 Boost
+     markup; Snap keeps its own navigation, so on LSU only .nav-tabs/.nav-pills apply.) */
   .secondary-navigation, .secondary-navigation .navigation,
   .moremenu, .nav-tabs, .nav-pills {
     background-color: var(--dm-bg) !important;
@@ -91,6 +92,9 @@ html.lsu-dark {
   }
 
   /* ---------- Drawers (course index, blocks) ---------- */
+  /* Boost fallback: Moodle 4's course index and drawers. Snap did not adopt them (it
+     has #course-toc and the personal menu, styled further down), so these rules only
+     matter if LSU ever switches theme. */
   .drawer, .drawer-left, .drawer-right, .drawerheader,
   #theme_boost-drawers-courseindex, #theme_boost-drawers-blocks,
   .courseindex, .courseindex-section, .courseindex-item,
@@ -234,6 +238,16 @@ html.lsu-dark {
     border-color: var(--dm-border) !important;
   }
   .tox .tox-tbtn svg, .tox .tox-mbtn { fill: var(--dm-text) !important; color: var(--dm-text) !important; }
+  /* The text area itself (Moodle 4.1+ TinyMCE). It is a separate iframe document that
+     loads Moodle's editor stylesheet; this file reaches it because the manifest sets
+     match_about_blank. Match the field color rather than the page color. */
+  & body#tinymce, & body.mce-content-body {
+    background-color: var(--dm-surface-2) !important;
+    color: var(--dm-text) !important;
+  }
+  & body.mce-content-body[data-mce-placeholder]:not(.mce-visualblocks)::before {
+    color: var(--dm-muted) !important;
+  }
 
   /* ---------- Calendar ---------- */
   .calendarmonth td, .calendarmonth th, .maincalendar .calendar-controls,
@@ -373,6 +387,25 @@ html.lsu-dark {
   .no-overflow img:not(.lsuicons):not(.icon):not(.userpicture) {
     background-color: #eceaf2;
     border-radius: 4px;
+  }
+
+  /* Course-card quick links (LSU's Mail / Grades / Users / Course Tools icons over
+     the course image). In light mode they sit on a light chip; going transparent
+     leaves white glyphs on a photo. Give them an opaque dark chip with gold icons. */
+  .cc_quick_link {
+    background-color: var(--dm-surface) !important;
+    border: 1px solid var(--dm-border) !important;
+    border-radius: 8px;
+    padding: 2px 6px;
+    opacity: 1 !important;
+  }
+  .cc_quick_link a, .cc_quick_link .cc_quick_link_icon {
+    color: var(--dm-link-hov) !important;
+    opacity: 1 !important;
+  }
+  .cc_quick_link a:hover .cc_quick_link_icon,
+  .cc_quick_link a:focus .cc_quick_link_icon {
+    color: var(--dm-text) !important;
   }
 
   /* Course table of contents: in light mode it sits directly on the page with no
