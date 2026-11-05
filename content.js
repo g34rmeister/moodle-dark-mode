@@ -262,19 +262,29 @@ function planBg(el) {
 // `floating: true` when a floating layer (see floats) lies between `el` and that
 // color, so `el` floats over other content too: Workday's search suggestions are a
 // static panel inside a transparent fixed wrapper.
-function lightBgBehind(el) {
+// Reading light mode means switching dark mode off for a moment, which restyles
+// the whole page twice: on Workday's Purchases page (5,800 elements) every hover
+// cost 200-300 ms. So each element's own light background is remembered once read,
+// and forgotten when the page changes its class or style (see handleMutations).
+// `live`: dark mode is off right now, so missing values can be read; otherwise a
+// missing one returns undefined and the caller switches dark mode off and asks again.
+const lightBgs = new WeakMap(); // element -> { c, photo }
+function lightOwnBg(e) {
+  const saved = e.dataset.dmInline && JSON.parse(e.dataset.dmInline)["background-color"];
+  let v;
+  if (saved && saved[0]) v = { c: parse(saved[0]), photo: false };
+  else { const cs = getComputedStyle(e); v = { c: parse(cs.backgroundColor), photo: !saved && photo(cs) }; }
+  lightBgs.set(e, v);
+  return v;
+}
+function lightBgBehind(el, live) {
   const root = html();
   let floating = false;
   for (let e = el.parentElement; e && e !== root; e = e.parentElement) {
-    const saved = e.dataset.dmInline && JSON.parse(e.dataset.dmInline)["background-color"];
-    let c;
-    if (saved && saved[0]) {
-      c = parse(saved[0]);
-    } else {
-      const cs = getComputedStyle(e);
-      c = parse(cs.backgroundColor);
-      if (!saved && photo(cs)) return null;
-    }
+    let v = lightBgs.get(e);
+    if (!v) { if (!live) return undefined; v = lightOwnBg(e); }
+    if (v.photo) return null;
+    const c = v.c;
     if (c && c.a >= 0.5) return { ...c, floating, from: e };
     if (floats(e)) floating = true;
   }
@@ -303,6 +313,23 @@ function floats(el) {
   return cs.position === "absolute" && (cs.boxShadow !== "none" || parseInt(cs.zIndex, 10) > 0);
 }
 
+function decideClear(els, bgPlans, i, own, behind, planOf) {
+  const el = els[i];
+  if (!own || !behind) return;
+  const mix = (k) => own[k] * own.a + behind[k] * (1 - own.a); // composite over parent
+  const diff = Math.abs(mix("r") - behind.r) + Math.abs(mix("g") - behind.g) + Math.abs(mix("b") - behind.b);
+  if (diff < 24) { if (!behind.floating && !floats(el)) bgPlans[i] = "clear"; }
+  else if (bgPlans[i] === "solid" && behind.canvas && isPageBackground(el)) bgPlans[i] = "page";
+  // A lighter box on a light box we darken (myLSU's white search pill on its
+  // light grey sidebar) would get the same card color and vanish: raise it.
+  // So would a small darker one (Workday's grey selected tab on a white card).
+  // Only small ones: Workday's grey nav sits on a white page wrapper, and a
+  // raised nav would change shade with every scan that does or doesn't
+  // include the wrapper.
+  else if (bgPlans[i] === "solid" && behind.from && ["solid", "raised"].includes(planOf(behind.from)) &&
+    (luminance(own) > luminance(behind) || el.getBoundingClientRect().height <= 80)) bgPlans[i] = "raised";
+}
+
 // Blocks pasted from editors often carry an inline `background-color: rgba(255,255,255,.9)`
 // that matches the card they sit on. In light mode that's invisible; darkening each one
 // separately would draw a dark bar per heading/paragraph. So for each light background,
@@ -311,13 +338,23 @@ function resolveClear(els, bgPlans) {
   const idx = bgPlans.map((p, i) => (p && p !== "tint" ? i : -1)).filter((i) => i >= 0);
   if (!idx.length) return;
   const root = html();
-  const wasFrozen = root.classList.contains("lsu-dm-freeze");
-  root.classList.add("lsu-dm-freeze"); // no transitions, so reads are immediate
-  root.classList.remove("lsu-dark");   // no paint happens before we switch it back
   // The plan for an ancestor: from this scan (ancestors come first in `els`, so it is
   // final already) or from an earlier one
   const index = new Map(els.map((el, i) => [el, i]));
   const planOf = (e) => (index.has(e) ? bgPlans[index.get(e)] : e.dataset.dmBg);
+  // Planned boxes are light, so their computed color (our override lifted) is their
+  // light one already. If every background behind them is remembered, decide without
+  // switching dark mode off (the usual case for hover re-checks).
+  const owns = idx.map((i) => parse(getComputedStyle(els[i]).backgroundColor));
+  idx.forEach((i, k) => { if (owns[k]) lightBgs.set(els[i], { c: owns[k], photo: false }); });
+  const known = idx.map((i) => lightBgBehind(els[i], false));
+  if (!known.includes(undefined)) {
+    idx.forEach((i, k) => decideClear(els, bgPlans, i, owns[k], known[k], planOf));
+    return;
+  }
+  const wasFrozen = root.classList.contains("lsu-dm-freeze");
+  root.classList.add("lsu-dm-freeze"); // no transitions, so reads are immediate
+  root.classList.remove("lsu-dark");   // no paint happens before we switch it back
   // Inline overrides whose original came from a stylesheet: lift them all at once,
   // so every read below sees light mode. One at a time, each lift would restyle the
   // whole page again: on Workday's org chart (6,000 elements) a hover took seconds.
@@ -330,22 +367,8 @@ function resolveClear(els, bgPlans) {
   }
   try {
     for (const i of idx) {
-      const el = els[i];
-      const own = parse(getComputedStyle(el).backgroundColor);
-      const behind = lightBgBehind(el);
-      if (!own || !behind) continue;
-      const mix = (k) => own[k] * own.a + behind[k] * (1 - own.a); // composite over parent
-      const diff = Math.abs(mix("r") - behind.r) + Math.abs(mix("g") - behind.g) + Math.abs(mix("b") - behind.b);
-      if (diff < 24) { if (!behind.floating && !floats(el)) bgPlans[i] = "clear"; }
-      else if (bgPlans[i] === "solid" && behind.canvas && isPageBackground(el)) bgPlans[i] = "page";
-      // A lighter box on a light box we darken (myLSU's white search pill on its
-      // light grey sidebar) would get the same card color and vanish: raise it.
-      // So would a small darker one (Workday's grey selected tab on a white card).
-      // Only small ones: Workday's grey nav sits on a white page wrapper, and a
-      // raised nav would change shade with every scan that does or doesn't
-      // include the wrapper.
-      else if (bgPlans[i] === "solid" && behind.from && ["solid", "raised"].includes(planOf(behind.from)) &&
-        (luminance(own) > luminance(behind) || el.getBoundingClientRect().height <= 80)) bgPlans[i] = "raised";
+      const own = lightOwnBg(els[i]).c;
+      decideClear(els, bgPlans, i, own, lightBgBehind(els[i], true), planOf);
     }
   } finally {
     for (const [e, v, p] of liftedInline) e.style.setProperty("background-color", v, p);
@@ -808,6 +831,7 @@ function handleMutations(mutations) {
       const cl = m.target.classList;
       if (cl.contains("lsu-dark") !== isDark() || cl.contains("lsu-amoled") !== state.amoled) syncRootClasses();
     } else {
+      lightBgs.delete(m.target); // its light background may have changed
       queue(m.target); // class/style change can restyle the whole subtree
     }
   }

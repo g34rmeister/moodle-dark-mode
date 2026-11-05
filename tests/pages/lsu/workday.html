@@ -73,7 +73,7 @@
 <table><tbody id="rows"></tbody></table>
 <pre id="out"></pre>
 <!-- A grey selected tab on a white card; a white menu with a shadow on a grey panel -->
-<div class="card" style="width:200px"><div id="step" style="background:#eceff3;height:20px">Payslips</div></div>
+<div class="card" id="stepCard" style="width:200px"><div id="step" style="background:#eceff3;height:20px">Payslips</div></div>
 <div class="card" style="width:200px"><div id="selItem" style="background:#f6f0ff;height:40px">Summary</div></div>
 <!-- Workday's worklet cards draw their edge as an outline -->
 <div class="card" id="olCard" style="width:200px;outline:0.8px solid oklch(0.856 0.0111 256.85)">Enter Time</div>
@@ -97,6 +97,16 @@
 // The nav button reaches its settled state after the first scan
 setTimeout(() => document.getElementById("nav").classList.add("ready"), 400);
 setTimeout(() => document.getElementById("fade").classList.add("sel"), 700);
+// A class change on a card re-checks it and its light children; that must not
+// switch dark mode off and on (each switch restyles the whole page)
+window.__flips = "not run";
+setTimeout(() => {
+  let n = 0;
+  const mo = new MutationObserver((ms) => { n += ms.length; });
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  document.getElementById("stepCard").classList.add("x-selected");
+  setTimeout(() => { mo.disconnect(); window.__flips = n; }, 400);
+}, 1300);
 // A light box added from inside a frame callback, after ours has run: a pre-paint
 // observer created after the extension's must already see it dark
 window.__lateSeen = "not run";
@@ -157,6 +167,7 @@ setTimeout(() => {
     logoTinted: cs("logo").filter !== "none",
     fadeBg: cs("fade").backgroundColor,
     rafBoxFirstPaint: window.__lateSeen,
+    rescanFlips: window.__flips,
   });
 }, 2000);
 </script></body></html>

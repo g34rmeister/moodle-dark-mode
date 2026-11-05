@@ -62,6 +62,7 @@ const EXPECT = {
     bodyLink: "rgb(108, 172, 236)",      // also straight on <body>
     fadeBg: "color(srgb 0.304 0.289647 0.336235)", // a 4 s fade to a pale tint is fixed as it starts
     rafBoxFirstPaint: SURFACE,           // content added in a frame callback is dark before that paint
+    rescanFlips: 0,                      // a re-check uses remembered light colors: no page-wide restyle
     tokBg: SURFACE, tokText: TEXT, tokBorder: BORDER, // Canvas Kit tokens redefined in workday.css
     tokMarks: "",                        // so the script had nothing to fix
     stripPopBg: SURFACE,                 // a white pop-up with a tiled strip image is darkened
