@@ -539,6 +539,15 @@ function holder() {
     },
   };
 }
+// Elements inside `node` with a color transition running right now.
+function fading(node) {
+  if (typeof document.getAnimations !== "function" || typeof CSSTransition === "undefined") return [];
+  return document.getAnimations()
+    .filter((a) => a instanceof CSSTransition && /color|background|border|fill|stroke|^all$/.test(a.transitionProperty))
+    .map((a) => a.effect?.target)
+    .filter((el) => el && el.nodeType === 1 && node.contains(el));
+}
+
 // Make the browser apply pending style changes now. All engines do this for the
 // whole document when any computed style is read.
 function settleStyles() {
@@ -642,6 +651,12 @@ function scanElements(node) {
   const shapes = all.filter((el) => el instanceof SVGGeometryElement);
   const { hold, settle } = holder();
   try {
+    // Elements mid-way through a color fade would be read at an in-between color:
+    // myLSU's sidebar rows fade from purple (hover) back to light grey, so a check
+    // as the pointer leaves sees purplish, finds nothing light and drops our
+    // override, and the fade then ends on light grey. Holding them ends the fade,
+    // so we read where it was going.
+    for (const el of fading(node)) hold(el);
     // Backgrounds are re-judged on every scan: lift the ones we set, plan again from
     // the page's own colors, and re-apply. A hover highlight we darkened (Workday's
     // lavender menu rows) must go back to transparent once the pointer leaves.

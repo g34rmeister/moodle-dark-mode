@@ -132,6 +132,8 @@ const HOVER_EXPECT = {
   rowBefore: "rgba(0, 0, 0, 0)", rowText: TEXT,
   rowHovered: SURFACE_2, rowTextHovered: TEXT,   // light highlight -> raised color, text stays light
   goldTextHovered: "rgb(102, 68, 153)",          // gold highlight kept, text back to its own purple
+  purpleHovered: "rgb(70, 29, 124)",             // a dark hover color is the page's own
+  purpleSoonAfter: SURFACE,                      // fading back to light: dark again at once
   rowAfter: "rgba(0, 0, 0, 0)", goldTextAfter: "rgb(180, 160, 204)", // purple lightened to 7:1 on the page
 };
 async function checkHover(engine, page) {
@@ -146,11 +148,16 @@ async function checkHover(engine, page) {
   const onRow = await read();
   await page.hover("#grow"); await sleep(500);
   const onGold = await read();
+  await page.hover("#prow"); await sleep(800);
+  const purpleHovered = await page.evaluate(() => getComputedStyle(document.getElementById("prow")).backgroundColor);
+  await page.hover("#hrow"); await sleep(150); // mid-way through the 0.6 s fade back
+  const purpleSoonAfter = await page.evaluate(() => getComputedStyle(document.getElementById("prow")).backgroundColor);
   await page.mouse.move(600, 380); await sleep(500); // empty part of the page
   const after = await read();
   check(engine, "hover", {
     rowBefore: before.row, rowText: before.text, rowHovered: onRow.row, rowTextHovered: onRow.text,
     goldTextHovered: onGold.gold, rowAfter: after.row, goldTextAfter: after.gold,
+    purpleHovered, purpleSoonAfter,
   }, HOVER_EXPECT);
 }
 
