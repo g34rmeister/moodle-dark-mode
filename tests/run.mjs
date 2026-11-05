@@ -56,11 +56,11 @@ const EXPECT = {
     cardText: TEXT,
     iconFill: TEXT,                      // dark SVG icon on the dark page
     chipIconFill: TEXT,                  // the icon on it turns light
-    chipBg: "color(srgb 0.277255 0.243922 0.332784)", // a pastel chip gets a dark tint of its hue
+    chipBg: "ok", // a pastel chip gets a dark tint of its hue
     stepBg: SURFACE_2,                   // a grey tab on a white card stays a step apart
     blueLink: "rgb(108, 172, 236)",      // link blue on the dark page is lightened
     bodyLink: "rgb(108, 172, 236)",      // also straight on <body>
-    fadeBg: "color(srgb 0.304 0.289647 0.336235)", // a 4 s fade to a pale tint is fixed as it starts
+    fadeBg: "ok", // a 4 s fade to a pale tint is fixed as it starts
     rafBoxFirstPaint: SURFACE,           // content added in a frame callback is dark before that paint
     rescanFlips: 0,                      // a re-check uses remembered light colors: no page-wide restyle
     iconRowText: TEXT, iconRowDark: true, iconRowImage: true, // a light row with an icon image is darkened, icon kept
@@ -74,7 +74,7 @@ const EXPECT = {
     blueRowText: "rgb(255, 255, 255)",   // grey text on a blue selected row: white (theme text falls short)
     blueChipText: "rgb(255, 255, 255)",  // white on a bright blue chip stays white
     olCardOutline: BORDER,               // a light grey outline gets the border color
-    selItemBg: "color(srgb 0.304 0.289647 0.336235)", // a pale-tinted selected item keeps a tint
+    selItemBg: "ok", // a pale-tinted selected item keeps a tint
     hammyEdge: `${BORDER} 0px 0px 0px 1px`, // a raised pop-up menu gets an outline
     outlineFill: "rgb(0, 0, 0)",         // its white stroke already draws it
     navBgFill: "none",                   // black only until the page's rule matched
@@ -83,8 +83,8 @@ const EXPECT = {
     popBg: SURFACE,                      // so does a pop-up menu
     sideBg: SURFACE, pillBg: SURFACE_2,  // a lighter box on a darkened one stays a step apart
     tintPillBg: SURFACE_2,               // a faint dark tint (selected item) shows as a raised step
-    ringBtnBorder: "color(srgb 0.905882 0.894118 0.933333 / 0.35)", // a translucent dark outline: light at 35%
-    halfBtnBorder: "color(srgb 0.905882 0.894118 0.933333 / 0.35)", // so is one at 51% (session popup buttons)
+    ringBtnBorder: "ok", // a translucent dark outline: light at 35%
+    halfBtnBorder: "ok", // so is one at 51% (session popup buttons)
     hairBorder: BORDER,                  // a 12% divider gets the border color
     orgCardEdge: `${BORDER} 0px 0px 0px 1px`, // shadow-only card gets an outline
     orgLine: MUTED,                      // near-black connector line stays a visible line

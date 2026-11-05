@@ -147,6 +147,11 @@ setTimeout(() => {
 }, 600);
 setTimeout(() => {
   const cs = (id) => getComputedStyle(document.getElementById(id));
+  // color-mix() results serialize differently per engine: compare them as rgb()
+  const cx = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+  // within 3 of each channel (and of the alpha, in hundredths): "ok", else the value
+  const near = (c, want) => { cx.clearRect(0, 0, 1, 1); cx.fillStyle = c; cx.fillRect(0, 0, 1, 1); const d = [...cx.getImageData(0, 0, 1, 1).data]; d[3] = Math.round(d[3] / 2.55); return d.every((v, i) => Math.abs(v - want[i]) <= 3) ? "ok" : c; };
+  const norm = (c) => { cx.clearRect(0, 0, 1, 1); cx.fillStyle = c; cx.fillRect(0, 0, 1, 1); const d = cx.getImageData(0, 0, 1, 1).data; return d[3] === 255 ? `rgb(${d[0]}, ${d[1]}, ${d[2]})` : `rgba(${d[0]}, ${d[1]}, ${d[2]}, ${(d[3] / 255).toFixed(2)})`; };
   document.getElementById("out").textContent = "RESULT " + JSON.stringify({
     htmlClass: document.documentElement.className,
     pageBg: cs("page").backgroundColor,
@@ -154,7 +159,7 @@ setTimeout(() => {
     cardText: cs("card").color,
     iconFill: cs("icon").fill,
     chipIconFill: cs("chipIcon").fill,
-    chipBg: cs("chip").backgroundColor,
+    chipBg: near(cs("chip").backgroundColor, [71, 62, 85, 100]),
     stepBg: cs("step").backgroundColor,
     blueLink: cs("blueLink").color,
     bodyLink: cs("bodyLink").color,
@@ -167,7 +172,7 @@ setTimeout(() => {
     blueRowText: cs("blueRow").color,
     blueChipText: cs("blueChip").color,
     olCardOutline: cs("olCard").outlineColor,
-    selItemBg: cs("selItem").backgroundColor,
+    selItemBg: near(cs("selItem").backgroundColor, [78, 74, 86, 100]),
     hammyEdge: cs("hammy").boxShadow,
     outlineFill: cs("outline").fill,
     navBgFill: cs("navBg").fill,
@@ -177,8 +182,8 @@ setTimeout(() => {
     sideBg: cs("side").backgroundColor,
     pillBg: cs("pill").backgroundColor,
     tintPillBg: cs("tintPill").backgroundColor,
-    ringBtnBorder: cs("ringBtn").borderTopColor,
-    halfBtnBorder: cs("halfBtn").borderTopColor,
+    ringBtnBorder: near(cs("ringBtn").borderTopColor, [232, 229, 238, 35]),
+    halfBtnBorder: near(cs("halfBtn").borderTopColor, [232, 229, 238, 35]),
     hairBorder: cs("hair").borderLeftColor,
     orgCardEdge: cs("orgCard").boxShadow,
     orgLine: cs("orgLine").borderLeftColor,
@@ -187,7 +192,7 @@ setTimeout(() => {
     lateText: cs("late").color,
     ruleBg: cs("rule").backgroundColor,
     logoTinted: cs("logo").filter !== "none",
-    fadeBg: cs("fade").backgroundColor,
+    fadeBg: near(cs("fade").backgroundColor, [78, 74, 86, 100]),
     rafBoxFirstPaint: window.__lateSeen,
     rescanFlips: window.__flips,
     iconRowText: cs("iconRow").color,
