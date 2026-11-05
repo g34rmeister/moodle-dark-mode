@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LSU Dark Mode (Unofficial)
 // @namespace    lsu-moodle-dark
-// @version      1.3.0
+// @version      1.3.1
 // @description  Unofficial dark and AMOLED theme for LSU Moodle, Workday and myLSU, with automatic contrast fixes. Not affiliated with LSU (userscript build for mobile browsers)
 // @match        https://moodle.lsu.edu/*
 // @match        https://*.myworkday.com/lsu/*
