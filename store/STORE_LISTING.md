@@ -67,4 +67,5 @@ Unofficial student project, not affiliated with or endorsed by Louisiana State U
 ## Notes for review
 
 - The name contains "LSU". Keep "(Unofficial)" and the "Not affiliated" line. Listings that look like they come from an institution can be rejected for impersonation.
-- Don't upload screenshots of logged-in pages: they show your name, courses and grades. The ones here are the public front page with the profile picture hidden. To regenerate them, replace `raw/*.jpg` and run `python store/make_store_images.py`.
+- Don't upload screenshots that show your name, courses, grades or account details. Screenshots 1-3 are the public Moodle front page with the profile picture hidden; screenshot 4 is the Workday home page while its greeting read "Hi There" (no name) with no menus open. To regenerate them, replace `raw/*.jpg` and run `python store/make_store_images.py`.
+- Updating from 1.2: version 1.3 adds two sites (Workday, myLSU). Chrome treats new sites as new permissions, so existing users see a prompt and the extension stays off until they accept it. Mention it in the release notes.
