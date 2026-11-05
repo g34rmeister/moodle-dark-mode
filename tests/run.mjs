@@ -60,6 +60,8 @@ const EXPECT = {
     stepBg: SURFACE_2,                   // a grey tab on a white card stays a step apart
     blueLink: "rgb(108, 172, 236)",      // link blue on the dark page is lightened
     bodyLink: "rgb(108, 172, 236)",      // also straight on <body>
+    stripPopBg: SURFACE,                 // a white pop-up with a tiled strip image is darkened
+    photoBoxBg: "rgb(255, 255, 255)",    // a cover-sized image is a photo: left alone
     blueRowText: "rgb(255, 255, 255)",   // grey text on a blue selected row: white (theme text falls short)
     blueChipText: "rgb(255, 255, 255)",  // white on a bright blue chip stays white
     olCardOutline: BORDER,               // a light grey outline gets the border color

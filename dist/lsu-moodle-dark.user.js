@@ -273,6 +273,17 @@ function unsetInline(el, prop) {
 }
 
 // ---------- Pass 1: backgrounds ----------
+// A background image is a photo unless it tiles: Workday's pop-ups draw their
+// left column with a 183px strip repeated down a white box, which is decoration on
+// a light box and gets darkened with it (our rules drop the image).
+function decorative(cs) {
+  return cs.backgroundImage.includes("url(") && !cs.backgroundRepeat.split(",").some((r) => r.includes("no-repeat")) &&
+    !/cover|contain/.test(cs.backgroundSize); // a photo sized to fill (Moodle's course cards)
+}
+function photo(cs) {
+  return cs.backgroundImage.includes("url(") && !decorative(cs);
+}
+
 const accentOf = new WeakMap();
 const pastel = (c) => (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b)) / 510 > 0.78 && luminance(c) > 0.4;
 const accentIds = new Map();
@@ -307,7 +318,7 @@ function planBg(el) {
     const spread = Math.max(bg.r, bg.g, bg.b) - Math.min(bg.r, bg.g, bg.b);
     if (spread >= 60 || (spread >= 12 && el.getBoundingClientRect().height <= 80)) { accentOf.set(el, bg); return "accent"; }
   }
-  if (img === "none" && light(bg)) return bg.a < 0.95 ? "overlay" : "solid";
+  if ((img === "none" || decorative(cs)) && light(bg)) return bg.a < 0.95 ? "overlay" : "solid";
   // A faint dark tint: Workday marks the selected item (My Tasks' "All Items") with
   // 5% navy. A visible shade on white, nothing on dark, so it gets the raised color.
   // Small boxes only, so a translucent black backdrop behind a dialog is left alone.
@@ -338,7 +349,7 @@ function lightBgBehind(el) {
     } else {
       const cs = getComputedStyle(e);
       c = parse(cs.backgroundColor);
-      if (!saved && cs.backgroundImage.includes("url(")) return null;
+      if (!saved && photo(cs)) return null;
     }
     if (c && c.a >= 0.5) return { ...c, floating, from: e };
     if (floats(e)) floating = true;
@@ -556,7 +567,7 @@ function makeBgFinder() {
       if (own) { result = own; break; }
       if (own === null) continue;
       const cs = getComputedStyle(e);
-      if (cs.backgroundImage.includes("url(")) { result = null; break; } // text over a photo: leave it
+      if (photo(cs)) { result = null; break; } // text over a photo: leave it
       const c = parse(cs.backgroundColor);
       if (c && c.a >= 0.5) { result = c; break; }
     }
