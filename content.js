@@ -155,7 +155,7 @@ const SIDES = { t: "top", r: "right", b: "bottom", l: "left" };
 sheet.textContent =
   `html.lsu-dark [data-dm-bg="page"]${HI} { background-color: ${PAGE} !important; background-image: none !important; }\n` +
   `html.lsu-dark [data-dm-bg="solid"]${HI} { background-color: ${SURFACE} !important; background-image: none !important; }\n` +
-  `html.lsu-dark [data-dm-bg="hover"]${HI} { background-color: ${RAISED} !important; background-image: none !important; }\n` +
+  `html.lsu-dark :is([data-dm-bg="hover"], [data-dm-bg="raised"])${HI} { background-color: ${RAISED} !important; background-image: none !important; }\n` +
   `html.lsu-dark [data-dm-bg="overlay"]${HI} { background-color: ${OVERLAY} !important; }\n` +
   `html.lsu-dark [data-dm-bg="clear"]${HI} { background-color: transparent !important; background-image: none !important; }\n` +
   Object.entries(SIDES).map(([k, side]) =>
@@ -232,7 +232,7 @@ function lightBgBehind(el) {
       if (ours) e.style.setProperty("background-color", ...ours);
       if (photo && !saved) return null;
     }
-    if (c && c.a >= 0.5) return { ...c, floating };
+    if (c && c.a >= 0.5) return { ...c, floating, from: e };
     if (floats(e)) floating = true;
   }
   return { r: 255, g: 255, b: 255, a: 1, canvas: true, floating };
@@ -271,6 +271,10 @@ function resolveClear(els, bgPlans) {
   const wasFrozen = root.classList.contains("lsu-dm-freeze");
   root.classList.add("lsu-dm-freeze"); // no transitions, so reads are immediate
   root.classList.remove("lsu-dark");   // no paint happens before we switch it back
+  // The plan for an ancestor: from this scan (ancestors come first in `els`, so it is
+  // final already) or from an earlier one
+  const index = new Map(els.map((el, i) => [el, i]));
+  const planOf = (e) => (index.has(e) ? bgPlans[index.get(e)] : e.dataset.dmBg);
   try {
     for (const i of idx) {
       const el = els[i];
@@ -281,6 +285,10 @@ function resolveClear(els, bgPlans) {
       const diff = Math.abs(mix("r") - behind.r) + Math.abs(mix("g") - behind.g) + Math.abs(mix("b") - behind.b);
       if (diff < 24) { if (!behind.floating && !floats(el)) bgPlans[i] = "clear"; }
       else if (bgPlans[i] === "solid" && behind.canvas && isPageBackground(el)) bgPlans[i] = "page";
+      // A lighter box on a light box we darken (myLSU's white search pill on its
+      // light grey sidebar) would get the same card color and vanish: raise it
+      else if (bgPlans[i] === "solid" && behind.from && ["solid", "raised"].includes(planOf(behind.from)) &&
+        luminance(own) > luminance(behind)) bgPlans[i] = "raised";
     }
   } finally {
     root.classList.add("lsu-dark");
@@ -298,8 +306,8 @@ function applyBg(el, kind) {
   } else if (kind === "clear") {
     setInline(el, "background-color", "transparent");
     setInline(el, "background-image", "none");
-  } else if (kind === "solid" || kind === "page" || kind === "hover") {
-    setInline(el, "background-color", kind === "page" ? PAGE : kind === "hover" ? RAISED : SURFACE);
+  } else if (kind === "solid" || kind === "page" || kind === "hover" || kind === "raised") {
+    setInline(el, "background-color", kind === "page" ? PAGE : kind === "solid" ? SURFACE : RAISED);
     setInline(el, "background-image", "none");
   } else {
     setInline(el, "background-color", OVERLAY);
@@ -368,7 +376,7 @@ function hasOwnText(el) {
 // reads white, and the text on it would be judged against white.
 const SURFACE_RGB = { r: 30, g: 27, b: 38, a: 1 };
 const RAISED_RGB = { r: 40, g: 36, b: 50, a: 1 };
-const OURS = { page: PAGE_BG, solid: SURFACE_RGB, hover: RAISED_RGB, overlay: PAGE_BG, clear: null,
+const OURS = { page: PAGE_BG, solid: SURFACE_RGB, hover: RAISED_RGB, raised: RAISED_RGB, overlay: PAGE_BG, clear: null,
   [PAGE]: PAGE_BG, [SURFACE]: SURFACE_RGB, [RAISED]: RAISED_RGB, [OVERLAY]: PAGE_BG, transparent: null };
 function ourBg(e) {
   if (e.dataset.dmBg) return OURS[e.dataset.dmBg];

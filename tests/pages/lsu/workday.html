@@ -35,6 +35,9 @@
   /* myLSU's sidebar row: light grey, purple on hover, fading between them */
   .prow { width: 300px; height: 24px; background: #dcdcdc; transition: all 0.6s ease-in-out; }
   .prow:hover { background: rgb(70, 29, 124); }
+  /* myLSU: a white search pill on a light grey sidebar */
+  .side { width: 200px; padding: 8px; background: #e6e6e6; }
+  .pill { height: 20px; border-radius: 10px; background: #fff; }
   .bar { position: fixed; left: 0; right: 0; bottom: 0; height: 40px; background: oklch(0.9692 0.0035 248.23); }
 </style></head>
 <body>
@@ -54,6 +57,7 @@
 <div class="grow" id="grow"><a href="#" id="gtext">Campus Resources</a></div>
 <div class="org-card" id="orgCard">Khanh</div><span class="org-line" id="orgLine"></span>
 <div class="prow" id="prow">Computing Services</div>
+<div class="side" id="side"><div class="pill" id="pill"></div></div>
 <hr class="divider" id="rule">
 <table><tbody id="rows"></tbody></table>
 <pre id="out"></pre>
@@ -86,6 +90,8 @@ setTimeout(() => {
     ringFill: cs("ring").fill,
     barBg: cs("bar").backgroundColor,
     popBg: cs("pop").backgroundColor,
+    sideBg: cs("side").backgroundColor,
+    pillBg: cs("pill").backgroundColor,
     orgCardEdge: cs("orgCard").boxShadow,
     orgLine: cs("orgLine").borderLeftColor,
     slowBg: cs("slow").backgroundColor,

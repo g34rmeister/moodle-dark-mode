@@ -12,13 +12,25 @@ html.lsu-dark {
     box-shadow: 0 0 0 6px #ffffff;
   }
 
-  /* Header icons (notification bell) and the sidebar icons that are still <img>
-     files (most are inline SVGs, which content.js recolors) are dark line art */
-  img.dock-menu-icon, img.sidebar-menu-icon { filter: brightness(0) invert(0.9) !important; }
+  /* Header icons (notification bell) are dark line-art SVG images */
+  img.dock-menu-icon { filter: brightness(0) invert(0.9); }
 
-  /* Quick Links icons (Email, Moodle, Workday, ...) are dark purple PNGs, some on a
-     baked-in white tile. Brightening lifts the purple and leaves the white tiles
-     white; inverting would turn those tiles black. Same treatment as LSU's purple
-     icons on Moodle (img.lsuicons in moodle.css). */
-  a.LSUFeatured img { filter: brightness(2.2) saturate(0.9); }
+  /* Sidebar icons that are still <img> files (most are inline SVGs, which content.js
+     recolors to a light lavender). This filter turns any image that lavender
+     (about #b4a4cc), so the two kinds match. myLSU's own rule,
+     `#sidebar ul li a img { filter: invert(1%) !important }`, has an ID in it, so
+     this selector needs one too. */
+  #sidebar ul li a img.sidebar-menu-icon {
+    filter: brightness(0) saturate(100%) invert(76%) sepia(10%) saturate(900%) hue-rotate(215deg) brightness(95%) !important;
+  }
+
+  /* Quick Links icons (Email, Moodle, Workday, ...) are purple PNGs, some with a
+     white tile baked in and some without. Recoloring treats the two kinds
+     differently, so give every one a white tile, as they look in light mode. */
+  a.LSUFeatured img {
+    background-color: #ffffff;
+    border-radius: 4px;
+    box-shadow: 0 0 0 2px #ffffff;
+    margin-right: 4px;
+  }
 }

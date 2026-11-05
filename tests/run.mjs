@@ -61,6 +61,7 @@ const EXPECT = {
     ringFill: "rgb(0, 0, 0)",            // invisible fill (fill-opacity 0) is left alone
     barBg: SURFACE,                      // fixed bar matching the page stays opaque
     popBg: SURFACE,                      // so does a pop-up menu
+    sideBg: SURFACE, pillBg: SURFACE_2,  // a lighter box on a darkened one stays a step apart
     orgCardEdge: `${BORDER} 0px 0px 0px 1px`, // shadow-only card gets an outline
     orgLine: MUTED,                      // near-black connector line stays a visible line
     slowBg: SURFACE,                     // recolored at once, not faded from white over 3 s
