@@ -163,6 +163,8 @@ sheet.textContent =
     `html.lsu-dark [data-dm-bd~="${k}"]${HI} { border-${side}-color: ${BORDER} !important; }\n` +
     `html.lsu-dark [data-dm-bs~="${k}"]${HI} { border-${side}-color: ${LINE} !important; }\n` +
     `html.lsu-dark [data-dm-bm~="${k}"]${HI} { border-${side}-color: ${FAINT} !important; }\n`).join("") +
+  Object.entries({ soft: BORDER, strong: LINE, faint: FAINT }).map(([k, color]) =>
+    `html.lsu-dark [data-dm-ol="${k}"]${HI} { outline-color: ${color} !important; }\n`).join("") +
   `html.lsu-dark [data-dm-edge]${HI} { box-shadow: 0 0 0 1px ${BORDER} !important; }\n` +
   // Used by full-page scans (see scan): cancels running transitions so computed
   // colors are final values, not mid-fade ones.
@@ -240,7 +242,7 @@ function planBg(el) {
 // Light-mode background behind `el`: the nearest ancestor with a solid color, read
 // while dark mode is switched off (see resolveClear). Ancestors we already overrode
 // inline report their saved original. If that original was empty, the light color
-// came from a stylesheet, so lift our override for a moment to read it.
+// came from a stylesheet: resolveClear lifts all such overrides before calling this.
 // With nothing painted behind, the browser's white canvas shows: { ..., canvas: true }.
 // `floating: true` when a floating layer (see floats) lies between `el` and that
 // color, so `el` floats over other content too: Workday's search suggestions are a
@@ -254,13 +256,9 @@ function lightBgBehind(el) {
     if (saved && saved[0]) {
       c = parse(saved[0]);
     } else {
-      const ours = saved ? [e.style.getPropertyValue("background-color"), e.style.getPropertyPriority("background-color")] : null;
-      if (ours) e.style.removeProperty("background-color");
       const cs = getComputedStyle(e);
-      const photo = cs.backgroundImage.includes("url(");
       c = parse(cs.backgroundColor);
-      if (ours) e.style.setProperty("background-color", ...ours);
-      if (photo && !saved) return null;
+      if (!saved && cs.backgroundImage.includes("url(")) return null;
     }
     if (c && c.a >= 0.5) return { ...c, floating, from: e };
     if (floats(e)) floating = true;
@@ -305,6 +303,16 @@ function resolveClear(els, bgPlans) {
   // final already) or from an earlier one
   const index = new Map(els.map((el, i) => [el, i]));
   const planOf = (e) => (index.has(e) ? bgPlans[index.get(e)] : e.dataset.dmBg);
+  // Inline overrides whose original came from a stylesheet: lift them all at once,
+  // so every read below sees light mode. One at a time, each lift would restyle the
+  // whole page again: on Workday's org chart (6,000 elements) a hover took seconds.
+  const liftedInline = [];
+  for (const e of root.querySelectorAll("[data-dm-inline]")) {
+    const saved = JSON.parse(e.dataset.dmInline)["background-color"];
+    if (!saved || saved[0]) continue;
+    liftedInline.push([e, e.style.getPropertyValue("background-color"), e.style.getPropertyPriority("background-color")]);
+    e.style.removeProperty("background-color");
+  }
   try {
     for (const i of idx) {
       const el = els[i];
@@ -315,12 +323,17 @@ function resolveClear(els, bgPlans) {
       const diff = Math.abs(mix("r") - behind.r) + Math.abs(mix("g") - behind.g) + Math.abs(mix("b") - behind.b);
       if (diff < 24) { if (!behind.floating && !floats(el)) bgPlans[i] = "clear"; }
       else if (bgPlans[i] === "solid" && behind.canvas && isPageBackground(el)) bgPlans[i] = "page";
-      // A different light box on a light box we darken (myLSU's white search pill on
-      // its light grey sidebar, Workday's grey selected tab on a white card) would
-      // get the same card color and vanish: raise it
-      else if (bgPlans[i] === "solid" && behind.from && ["solid", "raised"].includes(planOf(behind.from))) bgPlans[i] = "raised";
+      // A lighter box on a light box we darken (myLSU's white search pill on its
+      // light grey sidebar) would get the same card color and vanish: raise it.
+      // So would a small darker one (Workday's grey selected tab on a white card).
+      // Only small ones: Workday's grey nav sits on a white page wrapper, and a
+      // raised nav would change shade with every scan that does or doesn't
+      // include the wrapper.
+      else if (bgPlans[i] === "solid" && behind.from && ["solid", "raised"].includes(planOf(behind.from)) &&
+        (luminance(own) > luminance(behind) || el.getBoundingClientRect().height <= 80)) bgPlans[i] = "raised";
     }
   } finally {
+    for (const [e, v, p] of liftedInline) e.style.setProperty("background-color", v, p);
     root.classList.add("lsu-dark");
     // Apply the dark styles again *before* unfreezing. Otherwise the browser sees
     // every element go from the light values we just read to dark with transitions
@@ -367,26 +380,42 @@ function planBorders(el) {
   for (const [k, side] of Object.entries(SIDES)) {
     if (done.includes(k) || el.dataset.dmInline?.includes(`"border-${side}-color"`)) continue;
     if (parseFloat(cs[`border-${side}-width`]) === 0 || cs[`border-${side}-style`] === "none") continue;
-    const c = parse(cs[`border-${side}-color`]);
-    if (!c) continue;
-    // Judged as it shows on white (the same as c when opaque)
-    const w = { r: c.r * c.a + 255 * (1 - c.a), g: c.g * c.a + 255 * (1 - c.a), b: c.b * c.a + 255 * (1 - c.a) };
-    const spread = Math.max(w.r, w.g, w.b) - Math.min(w.r, w.g, w.b);
-    if (spread >= 40) continue;
-    // Translucent dark borders show as grey on white, lighter the more see-through
-    // they are: from 25% they are outlines (faint), below that hairline dividers,
-    // which get the border color so they stay as subtle as they were
-    const darkTint = c.a < 1 && luminance(c) < 0.2;
-    if (c.a >= 0.5 && luminance(c) < 0.01) strong.push(k);
-    else if (darkTint && c.a >= 0.25) faint.push(k);
-    else if (darkTint && c.a >= 0.08) soft.push(k);
-    else if (c.a >= 0.2 && luminance(w) > 0.35) soft.push(k);
+    const kind = lineKind(parse(cs[`border-${side}-color`]));
+    if (kind) ({ soft, strong, faint })[kind].push(k);
   }
-  return soft.length || strong.length || faint.length ?
-    { soft: soft.join(" "), strong: strong.join(" "), faint: faint.join(" ") } : null;
+  // Workday draws its card edges as an outline (light grey, 0.8px), not a border
+  let outline = null;
+  if (cs.outlineStyle !== "none" && parseFloat(cs.outlineWidth) > 0 && !el.dataset.dmOl &&
+    !el.dataset.dmInline?.includes('"outline-color"')) outline = lineKind(parse(cs.outlineColor));
+  return soft.length || strong.length || faint.length || outline ?
+    { soft: soft.join(" "), strong: strong.join(" "), faint: faint.join(" "), outline } : null;
 }
 
-function applyBorders(el, { soft, strong, faint }) {
+// How a grey line drawn for white should look on dark: "soft" (the border color),
+// "strong" (muted, for drawn black lines), "faint" (light at 35%) or null (leave it:
+// colored lines, and lines that already show).
+function lineKind(c) {
+  if (!c) return null;
+  // Judged as it shows on white (the same as c when opaque)
+  const w = { r: c.r * c.a + 255 * (1 - c.a), g: c.g * c.a + 255 * (1 - c.a), b: c.b * c.a + 255 * (1 - c.a) };
+  if (Math.max(w.r, w.g, w.b) - Math.min(w.r, w.g, w.b) >= 40) return null;
+  // Translucent dark borders show as grey on white, lighter the more see-through
+  // they are: from 25% they are outlines (faint), below that hairline dividers,
+  // which get the border color so they stay as subtle as they were
+  const darkTint = c.a < 1 && luminance(c) < 0.2;
+  if (c.a >= 0.5 && luminance(c) < 0.01) return "strong";
+  if (darkTint && c.a >= 0.25) return "faint";
+  if (darkTint && c.a >= 0.08) return "soft";
+  if (c.a >= 0.2 && luminance(w) > 0.35) return "soft";
+  return null;
+}
+const LINE_COLORS = { soft: BORDER, strong: LINE, faint: FAINT };
+
+function applyBorders(el, { soft, strong, faint, outline }) {
+  if (outline) {
+    if (!el.hasAttribute("style")) el.dataset.dmOl = outline;
+    else setInline(el, "outline-color", LINE_COLORS[outline]);
+  }
   if (!el.hasAttribute("style")) {
     const add = (key, sides) => { if (sides) el.dataset[key] = `${el.dataset[key] || ""} ${sides}`.trim(); };
     add("dmBd", soft);
@@ -697,6 +726,7 @@ function restoreAll() {
   document.querySelectorAll("[data-dm-bd]").forEach((el) => delete el.dataset.dmBd);
   document.querySelectorAll("[data-dm-bs]").forEach((el) => delete el.dataset.dmBs);
   document.querySelectorAll("[data-dm-bm]").forEach((el) => delete el.dataset.dmBm);
+  document.querySelectorAll("[data-dm-ol]").forEach((el) => delete el.dataset.dmOl);
   document.querySelectorAll("[data-dm-edge]").forEach((el) => delete el.dataset.dmEdge);
   document.querySelectorAll("[data-dm-ac]").forEach((el) => delete el.dataset.dmAc);
 }
@@ -782,10 +812,17 @@ systemDark.addEventListener("change", update);
 // them for the dark row would stay on the gold. Re-check the row under the pointer
 // or focus as it changes (the parent too, for siblings in the same row), and again
 // when a color transition ends, since rows that fade read mid-fade at first.
-// Each is queued, so a fast mouse costs one scan of a small subtree per 50 ms.
+// Each is queued, so a fast mouse costs one scan of a small subtree per frame.
+// Only small subtrees: on Workday's org chart (6,000 elements) the parent of what's
+// under the pointer can be the whole chart, and scrolling moves new elements under
+// a still pointer, so rescanning it made every frame of a scroll slow.
+const HOVER_MAX = 400;
+const smallEnough = (n) => n && n !== document.body && n !== html() && n.getElementsByTagName("*").length <= HOVER_MAX;
 const recheck = (e) => {
   const t = e.target;
-  if (t.nodeType === 1 && t !== document.body && t !== html()) queue(t.parentElement || t);
+  if (t.nodeType !== 1) return;
+  const node = smallEnough(t.parentElement) ? t.parentElement : smallEnough(t) ? t : null;
+  if (node) queue(node);
 };
 for (const type of ["mouseover", "mouseout", "focusin", "focusout"]) {
   document.addEventListener(type, recheck, { capture: true, passive: true });

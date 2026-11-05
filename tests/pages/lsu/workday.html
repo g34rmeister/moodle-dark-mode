@@ -69,6 +69,8 @@
 <!-- A grey selected tab on a white card; a white menu with a shadow on a grey panel -->
 <div class="card" style="width:200px"><div id="step" style="background:#eceff3;height:20px">Payslips</div></div>
 <div class="card" style="width:200px"><div id="selItem" style="background:#f6f0ff;height:40px">Summary</div></div>
+<!-- Workday's worklet cards draw their edge as an outline -->
+<div class="card" id="olCard" style="width:200px;outline:0.8px solid oklch(0.856 0.0111 256.85)">Enter Time</div>
 <div class="bar" id="bar"><button>OK</button></div>
 </div>
 <div class="pop" id="pop">Unread</div>
@@ -96,6 +98,7 @@ setTimeout(() => {
     chipIconFill: cs("chipIcon").fill,
     chipBg: cs("chip").backgroundColor,
     stepBg: cs("step").backgroundColor,
+    olCardOutline: cs("olCard").outlineColor,
     selItemBg: cs("selItem").backgroundColor,
     hammyEdge: cs("hammy").boxShadow,
     outlineFill: cs("outline").fill,

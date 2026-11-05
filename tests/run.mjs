@@ -58,6 +58,7 @@ const EXPECT = {
     chipIconFill: TEXT,                  // the icon on it turns light
     chipBg: "color(srgb 0.277255 0.243922 0.332784)", // a pastel chip gets a dark tint of its hue
     stepBg: SURFACE_2,                   // a grey tab on a white card stays a step apart
+    olCardOutline: BORDER,               // a light grey outline gets the border color
     selItemBg: "color(srgb 0.304 0.289647 0.336235)", // a pale-tinted selected item keeps a tint
     hammyEdge: `${BORDER} 0px 0px 0px 1px`, // a raised pop-up menu gets an outline
     outlineFill: "rgb(0, 0, 0)",         // its white stroke already draws it
