@@ -557,7 +557,10 @@ function lineKind(c) {
   // they are: from 25% they are outlines (faint), below that hairline dividers,
   // which get the border color so they stay as subtle as they were
   const darkTint = c.a < 1 && luminance(c) < 0.2;
-  if (c.a >= 0.5 && luminance(c) < 0.01) return "strong";
+  // Near-black only (Workday's org chart lines: about 0.001). Its navy outlines sit
+  // at about 0.0105, which engines convert from oklch() slightly differently, so the
+  // cut-off is kept well below them.
+  if (c.a >= 0.5 && luminance(c) < 0.004) return "strong";
   if (darkTint && c.a >= 0.25) return "faint";
   if (darkTint && c.a >= 0.08) return "soft";
   if (c.a >= 0.2 && luminance(w) > 0.35) return "soft";
