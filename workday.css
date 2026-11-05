@@ -6,6 +6,63 @@
    recolored by the icon part of the contrast pass. */
 html.lsu-dark {
 
+  /* Canvas Kit design tokens (github.com/Workday/canvas-kit). About half of
+     Workday's rules take their colors from these variables, so redefining them
+     makes those parts dark from the first paint: nothing for content.js to find,
+     nothing to flash. The rest (older generated classes) is left to content.js.
+     "Caution" text and icons stay dark: they sit on orange. */
+  & {
+    --cnvs-sys-color-bg-default: var(--dm-surface) !important;
+    --cnvs-sys-color-bg-alt-softer: var(--dm-bg) !important;
+    --cnvs-sys-color-bg-alt-soft: var(--dm-surface-2) !important;
+    --cnvs-sys-color-bg-alt-default: var(--dm-surface-2) !important;
+    --cnvs-sys-color-bg-alt-strong: var(--dm-border) !important;
+    --cnvs-sys-color-bg-alt-stronger: var(--dm-border) !important;
+    --cnvs-sys-color-bg-caution-softer: color-mix(in srgb, #ffa126 18%, var(--dm-surface)) !important;
+    --cnvs-sys-color-bg-critical-softer: color-mix(in srgb, #de2e21 18%, var(--dm-surface)) !important;
+    --cnvs-sys-color-bg-positive-softer: color-mix(in srgb, #43c463 18%, var(--dm-surface)) !important;
+    --cnvs-sys-color-bg-primary-soft: color-mix(in srgb, #0875e1 30%, var(--dm-surface)) !important;
+
+    --cnvs-sys-color-border-container: var(--dm-border) !important;
+    --cnvs-sys-color-border-divider: var(--dm-border) !important;
+    --cnvs-sys-color-border-input-default: color-mix(in srgb, var(--dm-text) 35%, transparent) !important;
+    --cnvs-sys-color-border-input-disabled: var(--dm-border) !important;
+    --cnvs-sys-color-border-input-strong: var(--dm-muted) !important;
+    --cnvs-sys-color-border-contrast-default: var(--dm-text) !important;
+    --cnvs-sys-color-border-contrast-strong: var(--dm-text) !important;
+
+    --cnvs-sys-color-fg-default: var(--dm-text) !important;
+    --cnvs-sys-color-fg-strong: var(--dm-text) !important;
+    --cnvs-sys-color-fg-stronger: var(--dm-text) !important;
+    --cnvs-sys-color-fg-contrast-default: var(--dm-text) !important;
+    --cnvs-sys-color-fg-contrast-strong: var(--dm-text) !important;
+    --cnvs-sys-color-fg-muted-default: var(--dm-muted) !important;
+    --cnvs-sys-color-fg-muted-soft: var(--dm-muted) !important;
+    --cnvs-sys-color-fg-muted-strong: var(--dm-text) !important;
+    --cnvs-sys-color-fg-muted-stronger: var(--dm-text) !important;
+    --cnvs-sys-color-fg-disabled: #77728a !important;
+    --cnvs-sys-color-fg-primary-default: #6cacec !important;
+    --cnvs-sys-color-fg-primary-strong: #8fbff0 !important;
+    --cnvs-sys-color-fg-critical-default: #ff7b70 !important;
+
+    --cnvs-sys-color-text-default: var(--dm-text) !important;
+    --cnvs-sys-color-text-strong: var(--dm-text) !important;
+    --cnvs-sys-color-text-stronger: var(--dm-text) !important;
+    --cnvs-sys-color-text-hint: var(--dm-muted) !important;
+    --cnvs-sys-color-text-disabled: #77728a !important;
+    --cnvs-sys-color-text-primary-default: #6cacec !important;
+    --cnvs-sys-color-text-primary-strong: #8fbff0 !important;
+    --cnvs-sys-color-text-primary-stronger: #b0d2f5 !important;
+    --cnvs-sys-color-text-critical-default: #ff7b70 !important;
+
+    --cnvs-sys-color-icon-default: var(--dm-muted) !important;
+    --cnvs-sys-color-icon-strong: var(--dm-text) !important;
+    --cnvs-sys-color-icon-soft: #77728a !important;
+    --cnvs-sys-color-icon-primary-default: #6cacec !important;
+    --cnvs-sys-color-icon-primary-strong: #8fbff0 !important;
+    --cnvs-sys-color-icon-critical-default: #ff7b70 !important;
+  }
+
   /* LSU wordmark in the header (a purple image) -> LSU gold, as on Moodle */
   [data-automation-id="wd_header_home_icon"] img {
     filter: brightness(0) saturate(100%) invert(64%) sepia(62%) saturate(2982%)

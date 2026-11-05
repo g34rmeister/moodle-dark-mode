@@ -4,6 +4,9 @@
   /* Workday writes its colors in oklch(), which stays oklch() in computed styles */
   /* Workday's grey page is a full-window <div>, not <body>; white cards sit on it */
   body { margin: 0; }
+  /* Canvas Kit tokens, as Workday defines them on :root */
+  :root { --cnvs-sys-color-bg-default: rgba(255,255,255,1); --cnvs-sys-color-text-default: rgba(73,73,73,1); --cnvs-sys-color-border-container: rgba(206,211,217,1); }
+  .tok { background: var(--cnvs-sys-color-bg-default); color: var(--cnvs-sys-color-text-default); border: 1px solid var(--cnvs-sys-color-border-container); }
   .page { min-height: 100vh; background: oklch(0.9692 0.0035 248.23); }
   .card { background: oklch(1 0 0); color: oklch(0.0969 0 0 / 0.84); }
   .wd-icon-fill { fill: oklch(0.2891 0 0); }
@@ -78,6 +81,7 @@
 <div class="bar" id="bar"><button>OK</button></div>
 </div>
 <div class="pop" id="pop">Unread</div>
+<div class="tok" id="tok">Canvas card</div>
 <div id="stripPop" style="position:absolute;top:300px;left:300px;width:200px;height:80px;box-shadow:0 2px 8px rgba(0,0,0,.3);background:#fff url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEklEQVR4nGP4//8/AwMDAxAAAQIBAIgAAX3RYJYAAAAASUVORK5CYII=) repeat-y;background-size:80px auto">Actions</div>
 <div id="photoBox" style="width:80px;height:40px;background:#fff url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEklEQVR4nGP4//8/AwMDAxAAAQIBAIgAAX3RYJYAAAAASUVORK5CYII=);background-size:cover">photo</div>
 <a href="#" id="bodyLink" style="color:#0875e1">Find Course Sections</a>
@@ -107,6 +111,10 @@ setTimeout(() => {
     stepBg: cs("step").backgroundColor,
     blueLink: cs("blueLink").color,
     bodyLink: cs("bodyLink").color,
+    tokBg: cs("tok").backgroundColor,
+    tokText: cs("tok").color,
+    tokBorder: cs("tok").borderTopColor,
+    tokMarks: Object.keys(document.getElementById("tok").dataset).join(","),
     stripPopBg: cs("stripPop").backgroundColor,
     photoBoxBg: cs("photoBox").backgroundColor,
     blueRowText: cs("blueRow").color,

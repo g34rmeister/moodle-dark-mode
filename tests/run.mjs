@@ -60,6 +60,8 @@ const EXPECT = {
     stepBg: SURFACE_2,                   // a grey tab on a white card stays a step apart
     blueLink: "rgb(108, 172, 236)",      // link blue on the dark page is lightened
     bodyLink: "rgb(108, 172, 236)",      // also straight on <body>
+    tokBg: SURFACE, tokText: TEXT, tokBorder: BORDER, // Canvas Kit tokens redefined in workday.css
+    tokMarks: "",                        // so the script had nothing to fix
     stripPopBg: SURFACE,                 // a white pop-up with a tiled strip image is darkened
     photoBoxBg: "rgb(255, 255, 255)",    // a cover-sized image is a photo: left alone
     blueRowText: "rgb(255, 255, 255)",   // grey text on a blue selected row: white (theme text falls short)
