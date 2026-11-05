@@ -2,10 +2,19 @@
    first. content.js handles the page itself; these are the images it can't recolor. */
 html.lsu-dark {
 
-  /* "myLSU" wordmark: gold "my" + dark purple "LSU" in one image. Brightening lifts
-     the purple off the dark header while the gold stays gold. */
-  img.logo.tenantbig { filter: brightness(1.7) saturate(0.85); }
+  /* "myLSU" wordmark: gold "my" + dark purple "LSU" in one image. A thin light
+     outline lifts the purple off the dark header and keeps both colors as they are
+     (brightening the image turned the gold neon). */
+  img.logo.tenantbig {
+    filter: drop-shadow(0 0 1px rgba(231, 228, 238, 0.95)) drop-shadow(0 0 1px rgba(231, 228, 238, 0.95));
+  }
 
   /* Header icons (notification bell) are dark line-art SVG images */
   img.dock-menu-icon { filter: brightness(0) invert(0.9); }
+
+  /* Quick Links icons (Email, Moodle, Workday, ...) are dark purple PNGs, some on a
+     baked-in white tile. Brightening lifts the purple and leaves the white tiles
+     white; inverting would turn those tiles black. Same treatment as LSU's purple
+     icons on Moodle (img.lsuicons in moodle.css). */
+  a.LSUFeatured img { filter: brightness(2.2) saturate(0.9); }
 }

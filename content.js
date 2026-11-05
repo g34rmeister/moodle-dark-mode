@@ -205,8 +205,12 @@ function planBg(el) {
 // inline report their saved original. If that original was empty, the light color
 // came from a stylesheet, so lift our override for a moment to read it.
 // With nothing painted behind, the browser's white canvas shows: { ..., canvas: true }.
+// `floating: true` when a floating layer (see floats) lies between `el` and that
+// color, so `el` floats over other content too: Workday's search suggestions are a
+// static panel inside a transparent fixed wrapper.
 function lightBgBehind(el) {
   const root = html();
+  let floating = false;
   for (let e = el.parentElement; e && e !== root; e = e.parentElement) {
     const saved = e.dataset.dmInline && JSON.parse(e.dataset.dmInline)["background-color"];
     let c;
@@ -221,9 +225,10 @@ function lightBgBehind(el) {
       if (ours) e.style.setProperty("background-color", ...ours);
       if (photo && !saved) return null;
     }
-    if (c && c.a >= 0.5) return c;
+    if (c && c.a >= 0.5) return { ...c, floating };
+    if (floats(e)) floating = true;
   }
-  return { r: 255, g: 255, b: 255, a: 1, canvas: true };
+  return { r: 255, g: 255, b: 255, a: 1, canvas: true, floating };
 }
 
 // A light box straight on the browser canvas that fills most of the window is the
@@ -235,6 +240,17 @@ function isPageBackground(el) {
   const r = el.getBoundingClientRect();
   return r.width >= innerWidth * 0.6 && r.height >= innerHeight * 0.6 &&
     !["fixed", "absolute"].includes(getComputedStyle(el).position);
+}
+
+// A box that floats over other content matches what's behind it only while nothing
+// is under it: Workday's fixed OK / Cancel bar (content scrolls beneath) and its
+// pop-up menus (absolute, raised with a shadow, over the page). These keep the card
+// color instead of going transparent. Plain absolute boxes (badges, decorations)
+// don't count.
+function floats(el) {
+  const cs = getComputedStyle(el);
+  if (cs.position === "fixed" || cs.position === "sticky") return true;
+  return cs.position === "absolute" && (cs.boxShadow !== "none" || parseInt(cs.zIndex, 10) > 0);
 }
 
 // Blocks pasted from editors often carry an inline `background-color: rgba(255,255,255,.9)`
@@ -256,7 +272,7 @@ function resolveClear(els, bgPlans) {
       if (!own || !behind) continue;
       const mix = (k) => own[k] * own.a + behind[k] * (1 - own.a); // composite over parent
       const diff = Math.abs(mix("r") - behind.r) + Math.abs(mix("g") - behind.g) + Math.abs(mix("b") - behind.b);
-      if (diff < 24) bgPlans[i] = "clear";
+      if (diff < 24) { if (!behind.floating && !floats(el)) bgPlans[i] = "clear"; }
       else if (bgPlans[i] === "solid" && behind.canvas && isPageBackground(el)) bgPlans[i] = "page";
     }
   } finally {
@@ -352,33 +368,83 @@ function currentFix(el, prop) {
   return undefined;
 }
 
-// Returns undefined for "leave as is", or { el, prop, src, out }: the element's own
-// color and the replacement it needs (out = null: it no longer needs one, so drop
-// our fix). `prop` is a key of PAINTS.
+// The fill and stroke the page itself gives each icon shape right now, read with our
+// own overrides lifted for a moment (transitions frozen, nothing is painted).
+// Shapes need this rather than the color saved when we first fixed them: SVG's
+// initial fill is black, and a page rule that removes it can briefly not match.
+// Workday's `.wd-icon-background { fill: none }` depends on the button's state, so
+// a scan in between sees black; trusting that forever turns outline icons into
+// solid blocks.
+function readPagePaints(shapes) {
+  const own = new Map();
+  if (!shapes.length) return own;
+  const root = html();
+  const wasFrozen = root.classList.contains("lsu-dm-freeze");
+  root.classList.add("lsu-dm-freeze");
+  const undo = [];
+  for (const el of shapes) {
+    for (const prop of ["fill", "stroke"]) {
+      const { id } = PAINTS[prop];
+      if (el.dataset[id] !== undefined) {
+        const v = el.dataset[id];
+        delete el.dataset[id];
+        undo.push(() => { el.dataset[id] = v; });
+      } else if (el.dataset.dmInline?.includes(`"${prop}"`)) {
+        const ours = [el.style.getPropertyValue(prop), el.style.getPropertyPriority(prop)];
+        const [v, p] = JSON.parse(el.dataset.dmInline)[prop];
+        if (v) el.style.setProperty(prop, v, p);
+        else el.style.removeProperty(prop);
+        undo.push(() => el.style.setProperty(prop, ...ours));
+      }
+    }
+  }
+  try {
+    for (const el of shapes) {
+      const cs = getComputedStyle(el);
+      own.set(el, { fill: cs.fill, stroke: cs.stroke, strokeWidth: cs.strokeWidth,
+        fillOpacity: parseFloat(cs.fillOpacity), strokeOpacity: parseFloat(cs.strokeOpacity) });
+    }
+  } finally {
+    undo.forEach((fn) => fn());
+    if (!wasFrozen) root.classList.remove("lsu-dm-freeze");
+  }
+  return own;
+}
+
 // The element's own color for `prop`, as the page set it, or null if there is none
-// to judge (fill "none" or "url(#gradient)", or nearly transparent).
-function originalPaint(el, prop) {
-  if (currentFix(el, prop) !== undefined) {
-    // Already fixed: judge the *original* color we saved, never the live one. A
+// to judge (fill "none" or "url(#gradient)", or nearly transparent). `own` is the
+// result of readPagePaints, for shapes.
+function originalPaint(el, prop, own) {
+  let c;
+  if (prop !== "color") {
+    // fill-opacity / stroke-opacity count too: Snap's progress ring has a black
+    // fill at fill-opacity 0, which nobody sees
+    const o = own.get(el);
+    c = parse(o[prop]);
+    if (c) c = { ...c, a: c.a * o[`${prop}Opacity`] };
+  } else if (currentFix(el, prop) !== undefined) {
+    // Already fixed text: judge the *original* color we saved, never the live one. A
     // rescan during a color transition (hover fades, .btn has `transition: color`)
     // would read an in-between color and chase it.
     const saved = el.dataset[PAINTS[prop].src];
     if (!saved) return null;
     const [r, g, b] = saved.split(",").map(Number);
     return { r, g, b, a: 1 };
+  } else {
+    c = parse(getComputedStyle(el)[prop]);
   }
-  const c = parse(getComputedStyle(el)[prop]);
   return c && c.a >= 0.3 ? c : null;
 }
 
 // Returns undefined for "leave as is", or { el, prop, src, out }: the element's own
 // color and the replacement it needs (out = null: it no longer needs one, so drop
 // our fix). `prop` is a key of PAINTS.
-function planPaint(el, prop, effectiveBg) {
+function planPaint(el, prop, effectiveBg, own) {
   const P = PAINTS[prop];
   const fixed = currentFix(el, prop);
-  const src = originalPaint(el, prop);
-  if (!src) return undefined;
+  const src = originalPaint(el, prop, own);
+  // Nothing to judge any more (an icon's fill became "none"): drop a fix we made
+  if (!src) return fixed === undefined ? undefined : { el, prop, src: null, out: null };
   // Re-checked on every scan, so a fix follows its background: a section that turns
   // light gets its original color back, and one that turns dark gets a new fix.
   const bg = effectiveBg(el);
@@ -388,8 +454,8 @@ function planPaint(el, prop, effectiveBg) {
     // outline around a dark interior (Snap's feed icons) stays an outline, rather
     // than becoming a solid light blob.
     const other = prop === "fill" ? "stroke" : "fill";
-    const o = originalPaint(el, other);
-    const drawn = other === "fill" || parseFloat(getComputedStyle(el).strokeWidth) > 0;
+    const o = originalPaint(el, other, own);
+    const drawn = other === "fill" || parseFloat(own.get(el).strokeWidth) > 0;
     ok = !!o && drawn && contrast(o, bg) >= P.min;
   }
   const out = ok ? null : fixText(src, bg);
@@ -449,9 +515,10 @@ function scanElements(node) {
     if (bdPlans[i]) applyBorders(el, bdPlans[i]);
   });
   const effectiveBg = makeBgFinder();
+  const own = readPagePaints(shapes);
   const fgPlans = [
     ...els.filter(hasOwnText).map((el) => planPaint(el, "color", effectiveBg)),
-    ...shapes.flatMap((el) => [planPaint(el, "fill", effectiveBg), planPaint(el, "stroke", effectiveBg)]),
+    ...shapes.flatMap((el) => [planPaint(el, "fill", effectiveBg, own), planPaint(el, "stroke", effectiveBg, own)]),
   ];
   fgPlans.forEach((plan) => plan && applyPaint(plan));
 }

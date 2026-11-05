@@ -96,7 +96,9 @@ Notes on Workday and myLSU:
 - Workday paints its grey page background on a full-window `<div>` rather than `<body>`. `content.js` treats a light box like that (filling most of the window, with nothing painted behind it, not fixed or absolute) as the page and gives it the page color rather than the card color, so cards stay distinct and AMOLED stays true black.
 - Workday writes its colors as `oklch()`, which stays `oklch()` in computed styles. `content.js` converts such colors to RGB by painting a pixel on a canvas.
 - Workday's grid cells and buttons have `transition: all`, so right after `content.js` darkens one, it still reads white. When judging text, `content.js` uses the color it set itself for backgrounds it changed, rather than the computed value.
-- Workday's icons are inline SVGs (`.wd-icon-fill`), so the contrast pass also checks SVG `fill` and `stroke`. A shape whose other paint already stands out (a light outline around a dark interior) is left as it is.
+- Workday's icons are inline SVGs (`.wd-icon-fill`), so the contrast pass also checks SVG `fill` and `stroke`. A shape whose other paint already stands out (a light outline around a dark interior) is left as it is, and `fill-opacity`/`stroke-opacity` count. Shapes are re-judged on every rescan against the page's own current paint (read with the override lifted), because SVG's initial fill is black and Workday's rule that removes it from `.wd-icon-background` briefly stops matching while a button changes state.
+- A light box that matches what's behind it normally goes transparent. A box that floats over other content doesn't: fixed or sticky boxes (Workday's OK / Cancel bar), raised absolute ones (pop-up menus, with a shadow or z-index), and anything inside a floating layer (Workday's search suggestions sit in a transparent fixed wrapper). These keep the card color. On Moodle this also keeps Snap's slide-out settings panel and the course search results opaque.
+- myLSU's Quick Links icons are purple PNGs, some on a baked-in white tile, so `mylsu.css` brightens them (as `moodle.css` does for LSU's purple icons) rather than inverting them.
 
 ## Reporting issues
 

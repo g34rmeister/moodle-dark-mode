@@ -57,6 +57,11 @@ const EXPECT = {
     iconFill: TEXT,                      // dark SVG icon on the dark page
     chipIconFill: "rgb(51, 51, 51)",     // same icon on a light chip keeps its color
     outlineFill: "rgb(0, 0, 0)",         // its white stroke already draws it
+    navBgFill: "none",                   // black only until the page's rule matched
+    ringFill: "rgb(0, 0, 0)",            // invisible fill (fill-opacity 0) is left alone
+    barBg: SURFACE,                      // fixed bar matching the page stays opaque
+    popBg: SURFACE,                      // so does a pop-up menu
+    suggBg: SURFACE,                     // and a panel inside a floating wrapper
     lateText: TEXT,                      // text in a cell that was still fading out
     ruleBg: BORDER,                      // workday.css
     logoTinted: true,                    // workday.css
@@ -253,6 +258,7 @@ async function testWebKit() {
       iconFill: TEXT,
       lateText: TEXT,
       ruleBg: "rgb(44, 40, 54)",         // AMOLED border
+      barBg: "rgb(11, 10, 15)",
     });
     await ctx.close();
   } finally {

@@ -37,7 +37,7 @@ Unofficial student project, not affiliated with or endorsed by Louisiana State U
 | Asset | File |
 | --- | --- |
 | Store icon 128×128 | `../icons/icon-128.png` |
-| Screenshots 1280×800 | `screenshot-1-light-vs-dark.png`, `screenshot-2-amoled.png`, `screenshot-3-dark.png` (and `screenshot-4-workday.png` once `raw/workday.jpg` is captured) |
+| Screenshots 1280×800 | `screenshot-1-light-vs-dark.png`, `screenshot-2-amoled.png`, `screenshot-3-dark.png`, `screenshot-4-workday.png` |
 | Small promo tile 440×280 | `promo-small-440x280.png` |
 
 ## Privacy practices tab
