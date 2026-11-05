@@ -105,6 +105,7 @@ function contrast(a, b) {
 }
 
 const TEXT = { r: 231, g: 228, b: 238 };
+const WHITE = { r: 255, g: 255, b: 255 };
 const MUTED = { r: 168, g: 162, b: 184 };
 const TARGET_CONTRAST = 7; // aim for AAA when we have to touch a color at all
 
@@ -116,7 +117,10 @@ function fixText(c, bg) {
   if (spread < 40) {
     const secondary = luminance(c) > 0.1; // mid-grey = secondary text in light mode
     const pick = secondary ? MUTED : TEXT;
-    return contrast(pick, bg) >= MIN_CONTRAST ? pick : TEXT;
+    if (contrast(pick, bg) >= MIN_CONTRAST) return pick;
+    // On a mid-tone color (Workday's blue selected row) the theme's text can fall
+    // just short; white goes furthest
+    return contrast(TEXT, bg) >= MIN_CONTRAST ? TEXT : WHITE;
   }
   for (let t = 0.1; t <= 1.001; t += 0.1) {
     const q = (v) => Math.min(255, Math.round((v + (255 - v) * t) / 4) * 4);
@@ -609,7 +613,10 @@ function planPaint(el, prop, effectiveBg, own) {
     const drawn = other === "fill" || parseFloat(own.get(el).strokeWidth) > 0;
     ok = !!o && drawn && contrast(o, bg) >= P.min;
   }
-  const out = ok ? null : fixText(src, bg);
+  let out = ok ? null : fixText(src, bg);
+  // Only if it helps: white text on a bright blue chip is below 4.5:1 in light mode
+  // too, and our light grey would read worse than the white it replaces
+  if (out && contrast(out, bg) <= contrast(src, bg)) out = null;
   if ((out ? rgbKey(out) : undefined) === fixed) return undefined;
   return { el, prop, src, out };
 }
@@ -734,19 +741,24 @@ function restoreAll() {
 // Batch DOM changes (AJAX content, drawers opening, hover states) into one scan per
 // frame, run just before the browser paints it, so new content never shows up
 // light first (Workday renders grid rows as you scroll). A hidden tab gets no
-// frames; its scans wait until it's shown.
+// frames; its scans wait until it's shown. A window that's visible but covered by
+// other windows gets no frames either, while the page keeps loading, so after
+// 100 ms a timer runs the scan instead.
 let pending = new Set();
 let scheduled = false;
+function flush() {
+  if (!scheduled) return;
+  scheduled = false;
+  const nodes = [...pending].filter((n) => n.isConnected);
+  pending = new Set();
+  nodes.filter((n) => !nodes.some((o) => o !== n && o.contains(n))).forEach((n) => scan(n));
+}
 function queue(node) {
   pending.add(node);
   if (scheduled) return;
   scheduled = true;
-  requestAnimationFrame(() => {
-    scheduled = false;
-    const nodes = [...pending].filter((n) => n.isConnected);
-    pending = new Set();
-    nodes.filter((n) => !nodes.some((o) => o !== n && o.contains(n))).forEach((n) => scan(n));
-  });
+  requestAnimationFrame(flush);
+  setTimeout(() => { if (document.visibilityState === "visible") flush(); }, 100);
 }
 
 function handleMutations(mutations) {

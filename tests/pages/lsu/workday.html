@@ -71,6 +71,10 @@
 <div class="card" style="width:200px"><div id="selItem" style="background:#f6f0ff;height:40px">Summary</div></div>
 <!-- Workday's worklet cards draw their edge as an outline -->
 <div class="card" id="olCard" style="width:200px;outline:0.8px solid oklch(0.856 0.0111 256.85)">Enter Time</div>
+<!-- Search result link blue; a blue selected prompt row (grey text); white text on a bright blue chip -->
+<a href="#" id="blueLink" style="color:#0875e1">Time Off</a>
+<div id="blueRow" style="background:#0065cc;color:#3b3b3b">PJ000022</div>
+<div id="blueChip" style="background:#007df6;color:#fff">is on</div>
 <div class="bar" id="bar"><button>OK</button></div>
 </div>
 <div class="pop" id="pop">Unread</div>
@@ -98,6 +102,9 @@ setTimeout(() => {
     chipIconFill: cs("chipIcon").fill,
     chipBg: cs("chip").backgroundColor,
     stepBg: cs("step").backgroundColor,
+    blueLink: cs("blueLink").color,
+    blueRowText: cs("blueRow").color,
+    blueChipText: cs("blueChip").color,
     olCardOutline: cs("olCard").outlineColor,
     selItemBg: cs("selItem").backgroundColor,
     hammyEdge: cs("hammy").boxShadow,
