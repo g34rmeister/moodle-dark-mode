@@ -63,6 +63,7 @@ const EXPECT = {
     fadeBg: "color(srgb 0.304 0.289647 0.336235)", // a 4 s fade to a pale tint is fixed as it starts
     rafBoxFirstPaint: SURFACE,           // content added in a frame callback is dark before that paint
     rescanFlips: 0,                      // a re-check uses remembered light colors: no page-wide restyle
+    trnAfterRecheck: "0 rgb(40, 36, 50)", // a re-checked tile with transition: all doesn't fade from light
     newContentFlips: 0,                  // nor does new content: untouched elements read as they are
     tokBg: SURFACE, tokText: TEXT, tokBorder: BORDER, // Canvas Kit tokens redefined in workday.css
     tokMarks: "",                        // so the script had nothing to fix

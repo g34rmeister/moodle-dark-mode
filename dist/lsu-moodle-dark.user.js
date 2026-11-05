@@ -684,10 +684,14 @@ function fading(node) {
     .filter((el) => el && el.nodeType === 1 && node.contains(el));
 }
 
-// Make the browser apply pending style changes now. All engines do this for the
-// whole document when any computed style is read.
+// Make the browser apply pending style changes now, for the whole document. A
+// computed-style read isn't enough: Chrome updates only the element read and its
+// ancestors, so a held tile kept the light color we read last, and once let go it
+// faded from that light color to dark. Its fade start triggered a re-check, which
+// did it again: Workday's tiles pulsed light on every frame while hovered. A
+// layout read updates every element's style.
 function settleStyles() {
-  getComputedStyle(html()).color;
+  void html().offsetWidth;
 }
 
 // The element's own color for `prop`, as the page set it, or null if there is none

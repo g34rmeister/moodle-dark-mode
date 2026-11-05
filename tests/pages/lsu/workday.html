@@ -33,6 +33,8 @@
   /* A side-menu item that fades in a pale tint when selected (Workday, 4 s here) */
   .fade { height: 30px; width: 200px; transition: background-color 4s linear; }
   .fade.sel { background: #f6f0ff; }
+  /* A tile that animates every property (Workday: transition: all .12s) */
+  .trn { transition: all 0.5s; background: #e1e6e8; width: 120px; height: 20px; }
   /* A box that animates every property, added after load: our recoloring must not fade */
   .slow { height: 20px; background: #fff; transition: all 3s linear; }
   /* Org chart: white cards edged only by a shadow, joined by near-black border lines */
@@ -82,6 +84,7 @@
 <div id="blueRow" style="background:#0065cc;color:#3b3b3b">PJ000022</div>
 <div id="blueChip" style="background:#007df6;color:#fff">is on</div>
 <div class="card" style="width:220px"><div class="fade" id="fade">Personal</div></div>
+<div class="card" id="trnCard" style="width:200px"><div class="trn" id="trn">Receipts</div></div>
 <div class="bar" id="bar"><button>OK</button></div>
 </div>
 <div class="pop" id="pop">Unread</div>
@@ -99,6 +102,12 @@ setTimeout(() => document.getElementById("nav").classList.add("ready"), 400);
 setTimeout(() => document.getElementById("fade").classList.add("sel"), 700);
 // A class change on a card re-checks it and its light children; that must not
 // switch dark mode off and on (each switch restyles the whole page)
+// Re-checking an already darkened tile must not leave it fading from light
+window.__trnAnims = "not run";
+setTimeout(() => {
+  document.getElementById("trnCard").classList.add("x-hovered");
+  setTimeout(() => { const t = document.getElementById("trn"); window.__trnAnims = t.getAnimations().filter(a => /^(background-color|color)$/.test(a.transitionProperty)).length + " " + getComputedStyle(t).backgroundColor; }, 150);
+}, 1500);
 window.__flips = "not run";
 // Content arriving after load (a grid's rows) must not switch dark mode off either
 window.__loadFlips = "not run";
@@ -179,6 +188,7 @@ setTimeout(() => {
     fadeBg: cs("fade").backgroundColor,
     rafBoxFirstPaint: window.__lateSeen,
     rescanFlips: window.__flips,
+    trnAfterRecheck: window.__trnAnims,
     newContentFlips: window.__loadFlips,
   });
 }, 2000);
