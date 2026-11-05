@@ -55,7 +55,11 @@ const EXPECT = {
     cardBg: SURFACE,                     // oklch(1 0 0) is read as white and darkened
     cardText: TEXT,
     iconFill: TEXT,                      // dark SVG icon on the dark page
-    chipIconFill: "rgb(51, 51, 51)",     // same icon on a light chip keeps its color
+    chipIconFill: TEXT,                  // the icon on it turns light
+    chipBg: "color(srgb 0.277255 0.243922 0.332784)", // a pastel chip gets a dark tint of its hue
+    stepBg: SURFACE_2,                   // a grey tab on a white card stays a step apart
+    selItemBg: "color(srgb 0.304 0.289647 0.336235)", // a pale-tinted selected item keeps a tint
+    hammyEdge: `${BORDER} 0px 0px 0px 1px`, // a raised pop-up menu gets an outline
     outlineFill: "rgb(0, 0, 0)",         // its white stroke already draws it
     navBgFill: "none",                   // black only until the page's rule matched
     ringFill: "rgb(0, 0, 0)",            // invisible fill (fill-opacity 0) is left alone
@@ -64,6 +68,8 @@ const EXPECT = {
     sideBg: SURFACE, pillBg: SURFACE_2,  // a lighter box on a darkened one stays a step apart
     tintPillBg: SURFACE_2,               // a faint dark tint (selected item) shows as a raised step
     ringBtnBorder: "color(srgb 0.905882 0.894118 0.933333 / 0.35)", // a translucent dark outline: light at 35%
+    halfBtnBorder: "color(srgb 0.905882 0.894118 0.933333 / 0.35)", // so is one at 51% (session popup buttons)
+    hairBorder: BORDER,                  // a 12% divider gets the border color
     orgCardEdge: `${BORDER} 0px 0px 0px 1px`, // shadow-only card gets an outline
     orgLine: MUTED,                      // near-black connector line stays a visible line
     slowBg: SURFACE,                     // recolored at once, not faded from white over 3 s

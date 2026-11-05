@@ -267,6 +267,20 @@ function unsetInline(el, prop) {
 }
 
 // ---------- Pass 1: backgrounds ----------
+const accentOf = new WeakMap();
+const pastel = (c) => (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b)) / 510 > 0.78 && luminance(c) > 0.4;
+const accentIds = new Map();
+function accentValue(c) { return `color-mix(in srgb, ${rgbKey(c)} 22%, ${SURFACE})`; }
+function accentId(c) {
+  const key = rgbKey(c);
+  if (!accentIds.has(key)) {
+    accentIds.set(key, accentIds.size);
+    sheet.textContent += `html.lsu-dark [data-dm-ac="${accentIds.get(key)}"]${HI} { background-color: ${accentValue(c)} !important; background-image: none !important; }
+`;
+  }
+  return accentIds.get(key);
+}
+
 function planBg(el) {
   if (el === document.body) return null; // page base is base.css's job
   const cs = getComputedStyle(el);
@@ -278,6 +292,15 @@ function planBg(el) {
     const spread = Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b);
     return luminance(c) > 0.5 && (spread < 60 || luminance(c) > 0.85);
   };
+  // A pastel (Workday's lavender behind the selected app) would be the one bright
+  // patch on a dark page, and a pale tint (#f6f0ff behind the selected item of a
+  // side menu) would turn the same card color as the menu. Both get a dark tint of
+  // their own hue, so a selected item still reads as selected. Pale tints only on
+  // small boxes: a big pale panel is a card. Strong colors (LSU gold) are left alone.
+  if (img === "none" && bg && bg.a >= 0.95 && pastel(bg)) {
+    const spread = Math.max(bg.r, bg.g, bg.b) - Math.min(bg.r, bg.g, bg.b);
+    if (spread >= 60 || (spread >= 12 && el.getBoundingClientRect().height <= 80)) { accentOf.set(el, bg); return "accent"; }
+  }
   if (img === "none" && light(bg)) return bg.a < 0.95 ? "overlay" : "solid";
   // A faint dark tint: Workday marks the selected item (My Tasks' "All Items") with
   // 5% navy. A visible shade on white, nothing on dark, so it gets the raised color.
@@ -368,10 +391,10 @@ function resolveClear(els, bgPlans) {
       const diff = Math.abs(mix("r") - behind.r) + Math.abs(mix("g") - behind.g) + Math.abs(mix("b") - behind.b);
       if (diff < 24) { if (!behind.floating && !floats(el)) bgPlans[i] = "clear"; }
       else if (bgPlans[i] === "solid" && behind.canvas && isPageBackground(el)) bgPlans[i] = "page";
-      // A lighter box on a light box we darken (myLSU's white search pill on its
-      // light grey sidebar) would get the same card color and vanish: raise it
-      else if (bgPlans[i] === "solid" && behind.from && ["solid", "raised"].includes(planOf(behind.from)) &&
-        luminance(own) > luminance(behind)) bgPlans[i] = "raised";
+      // A different light box on a light box we darken (myLSU's white search pill on
+      // its light grey sidebar, Workday's grey selected tab on a white card) would
+      // get the same card color and vanish: raise it
+      else if (bgPlans[i] === "solid" && behind.from && ["solid", "raised"].includes(planOf(behind.from))) bgPlans[i] = "raised";
     }
   } finally {
     root.classList.add("lsu-dark");
@@ -384,7 +407,11 @@ function resolveClear(els, bgPlans) {
 }
 
 function applyBg(el, kind) {
-  if (!el.hasAttribute("style")) {
+  if (kind === "accent") {
+    const c = accentOf.get(el);
+    if (!el.hasAttribute("style")) { el.dataset.dmBg = kind; el.dataset.dmAc = accentId(c); }
+    else { setInline(el, "background-color", accentValue(c)); setInline(el, "background-image", "none"); }
+  } else if (!el.hasAttribute("style")) {
     el.dataset.dmBg = kind;
   } else if (kind === "clear") {
     setInline(el, "background-color", "transparent");
@@ -422,8 +449,14 @@ function planBorders(el) {
     const w = { r: c.r * c.a + 255 * (1 - c.a), g: c.g * c.a + 255 * (1 - c.a), b: c.b * c.a + 255 * (1 - c.a) };
     const spread = Math.max(w.r, w.g, w.b) - Math.min(w.r, w.g, w.b);
     if (spread >= 40) continue;
+    // Translucent dark borders show as grey on white, lighter the more see-through
+    // they are: from 25% they are outlines (faint), below that hairline dividers,
+    // which get the border color so they stay as subtle as they were
+    const darkTint = c.a < 1 && luminance(c) < 0.2;
     if (c.a >= 0.5 && luminance(c) < 0.01) strong.push(k);
-    else if (c.a >= 0.2 && luminance(w) > 0.35) (c.a < 1 && luminance(c) < 0.2 ? faint : soft).push(k);
+    else if (darkTint && c.a >= 0.25) faint.push(k);
+    else if (darkTint && c.a >= 0.08) soft.push(k);
+    else if (c.a >= 0.2 && luminance(w) > 0.35) soft.push(k);
   }
   return soft.length || strong.length || faint.length ?
     { soft: soft.join(" "), strong: strong.join(" "), faint: faint.join(" ") } : null;
@@ -687,6 +720,7 @@ function scanElements(node) {
       hold(el);
       delete el.dataset.dmBg;
       delete el.dataset.dmEdge;
+      delete el.dataset.dmAc;
       unsetInline(el, "background-color");
       unsetInline(el, "background-image");
     }
@@ -696,10 +730,13 @@ function scanElements(node) {
     // highlight still shows. Decided before resolveClear: a hover color is often
     // close to what's behind it (Workday's lavender on white), which would clear it.
     // (Small boxes only: a whole card under the pointer at page load is a card.)
-    const hovered = els.map((el, i) => bgPlans[i] === "solid" && el.matches(":hover") && el.getBoundingClientRect().height <= 80);
+    // (A pale-tinted hover row counts too; a pastel selected item keeps its tint.)
+    const paleTint = (el) => { const c = accentOf.get(el); return c && Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b) < 60; };
+    const hovered = els.map((el, i) => (bgPlans[i] === "solid" || (bgPlans[i] === "accent" && paleTint(el))) &&
+      el.matches(":hover") && el.getBoundingClientRect().height <= 80);
     resolveClear(els, bgPlans);
     hovered.forEach((h, i) => { if (h) bgPlans[i] = "hover"; });
-    const edges = els.map((el, i) => bgPlans[i] === "solid" && edgeOnlyByShadow(el));
+    const edges = els.map((el, i) => ["solid", "raised"].includes(bgPlans[i]) && edgeOnlyByShadow(el));
     const bdPlans = els.map(planBorders);
     els.forEach((el, i) => {
       if (bgPlans[i] || bdPlans[i]) hold(el);
@@ -737,6 +774,7 @@ function restoreAll() {
   document.querySelectorAll("[data-dm-bs]").forEach((el) => delete el.dataset.dmBs);
   document.querySelectorAll("[data-dm-bm]").forEach((el) => delete el.dataset.dmBm);
   document.querySelectorAll("[data-dm-edge]").forEach((el) => delete el.dataset.dmEdge);
+  document.querySelectorAll("[data-dm-ac]").forEach((el) => delete el.dataset.dmAc);
 }
 
 // Batch DOM changes (AJAX content, drawers opening, hover states) into one scan per

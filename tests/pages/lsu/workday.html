@@ -51,7 +51,7 @@
 <svg width="10" height="10"><circle id="outline" cx="5" cy="5" r="4" fill="#000" stroke="#fff" stroke-width="1"/></svg>
 <!-- A progress ring (Snap): black fill at fill-opacity 0, dark stroke. Only the stroke is seen. -->
 <svg width="10" height="10"><circle id="ring" cx="5" cy="5" r="4" fill="#000" fill-opacity="0" stroke="rgb(61, 92, 31)" stroke-width="2"/></svg>
-<span class="chip"><svg class="wd-icon" width="10" height="10"><path id="chipIcon" class="wd-icon-fill" d="M0 0h10v10H0z"/></svg></span>
+<span class="chip" id="chip"><svg class="wd-icon" width="10" height="10"><path id="chipIcon" class="wd-icon-fill" d="M0 0h10v10H0z"/></svg></span>
 <span class="nav" id="nav"><svg class="wd-icon" width="10" height="10"><path id="navBg" class="wd-icon-background" d="M0 0h10v10H0z"/><path class="wd-icon-fill" d="M2 2h6v6H2z"/></svg></span>
 <div class="hrow" id="hrow"><span id="htext">Purchases</span></div>
 <div class="grow" id="grow"><a href="#" id="gtext">Campus Resources</a></div>
@@ -61,12 +61,18 @@
 <!-- My Tasks: selected item = 5% dark tint; round sort button = 35% dark border -->
 <button id="tintPill" style="all:unset;display:block;height:44px;width:200px;border-radius:600px;background:oklch(0.3343 0.0951 253.3 / 0.05)">All Items</button>
 <button id="ringBtn" style="all:unset;display:block;width:32px;height:32px;border-radius:600px;border:1px solid oklch(0.2333 0.0665 257.09 / 0.35)"></button>
+<button id="halfBtn" style="all:unset;display:block;width:80px;height:32px;border:1px solid oklch(0.2187 0.0685 255.77 / 0.51)">Not Now</button>
+<div id="hair" style="height:20px;border-left:2px solid oklch(0.2333 0.0665 257.09 / 0.12)"></div>
 <hr class="divider" id="rule">
 <table><tbody id="rows"></tbody></table>
 <pre id="out"></pre>
+<!-- A grey selected tab on a white card; a white menu with a shadow on a grey panel -->
+<div class="card" style="width:200px"><div id="step" style="background:#eceff3;height:20px">Payslips</div></div>
+<div class="card" style="width:200px"><div id="selItem" style="background:#f6f0ff;height:40px">Summary</div></div>
 <div class="bar" id="bar"><button>OK</button></div>
 </div>
 <div class="pop" id="pop">Unread</div>
+<div style="position:relative;background:#f3f5f7;width:200px;height:60px"><div id="hammy" style="position:absolute;top:4px;left:4px;width:120px;height:40px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3)">Sign Out</div></div>
 <div class="float-wrap"><div class="sugg" id="sugg">Find Course Sections</div></div>
 <script>
 // A grid row arriving after load (Workday renders grids late). Its cell is cleared
@@ -88,6 +94,10 @@ setTimeout(() => {
     cardText: cs("card").color,
     iconFill: cs("icon").fill,
     chipIconFill: cs("chipIcon").fill,
+    chipBg: cs("chip").backgroundColor,
+    stepBg: cs("step").backgroundColor,
+    selItemBg: cs("selItem").backgroundColor,
+    hammyEdge: cs("hammy").boxShadow,
     outlineFill: cs("outline").fill,
     navBgFill: cs("navBg").fill,
     ringFill: cs("ring").fill,
@@ -97,6 +107,8 @@ setTimeout(() => {
     pillBg: cs("pill").backgroundColor,
     tintPillBg: cs("tintPill").backgroundColor,
     ringBtnBorder: cs("ringBtn").borderTopColor,
+    halfBtnBorder: cs("halfBtn").borderTopColor,
+    hairBorder: cs("hair").borderLeftColor,
     orgCardEdge: cs("orgCard").boxShadow,
     orgLine: cs("orgLine").borderLeftColor,
     slowBg: cs("slow").backgroundColor,
