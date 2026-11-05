@@ -1,6 +1,18 @@
 // Settings: `enabled` is the master switch; `auto` makes it follow the system's
-// light/dark preference; `amoled` picks the true-black palette.
-const DEFAULTS = { enabled: true, auto: false, amoled: false };
+// light/dark preference; `amoled` picks the true-black palette. `siteMoodle`,
+// `siteWorkday` and `siteMylsu` turn it off on one site only (if a page there breaks).
+const DEFAULTS = { enabled: true, auto: false, amoled: false, siteMoodle: true, siteWorkday: true, siteMylsu: true };
+
+// Which of those sites this is. self.origin, not location: an about:blank frame (the
+// editor's iframe) has an empty location but inherits its parent's origin.
+const SITE_KEY = (() => {
+  let host = "";
+  try { host = new URL(self.origin).hostname; } catch {}
+  if (!host) host = location.hostname;
+  if (/(^|\.)myworkday\.com$/.test(host)) return "siteWorkday";
+  if (host === "mylsu.apps.lsu.edu") return "siteMylsu";
+  return "siteMoodle";
+})();
 
 // chrome.storage answers asynchronously, after the page has started to paint. To
 // avoid a flash of the wrong theme, start from a copy of the last settings kept in
@@ -13,7 +25,7 @@ function saveCache() {
 }
 
 const systemDark = matchMedia("(prefers-color-scheme: dark)");
-const isDark = () => state.enabled && (!state.auto || systemDark.matches);
+const isDark = () => state.enabled && state[SITE_KEY] !== false && (!state.auto || systemDark.matches);
 
 // The <html> element is looked up each time rather than kept: in TinyMCE's editor
 // iframe (Moodle 4.1+), the page rewrites the document with document.open/write after

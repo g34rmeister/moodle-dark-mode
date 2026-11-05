@@ -314,6 +314,23 @@ async function testWebKit() {
     check("webkit", "auto mode", { onLight, onDark }, { onLight: "", onDark: "lsu-dark" });
     await ctx.close();
 
+    // Per-site switch: Moodle off leaves Workday dark; the menu toggle turns it back on
+    const noMoodle = () => localStorage.setItem("lsu-moodle-dark", JSON.stringify({ enabled: true, siteMoodle: false }));
+    ctx = await newContext({}, noMoodle);
+    const m = await ctx.newPage();
+    await m.goto("https://moodle.lsu.edu/card.html");
+    await sleep(500);
+    const moodleOff = await m.evaluate(() => document.documentElement.className);
+    const w = await ctx.newPage();
+    await w.goto(pageUrl("lsu/workday.html"));
+    await sleep(500);
+    const workdayOn = await w.evaluate(() => document.documentElement.className);
+    await m.locator('button[aria-label^="Toggle dark mode"]').tap();
+    await sleep(300);
+    const moodleBack = await m.evaluate(() => document.documentElement.className);
+    check("webkit", "per-site switch", { moodleOff, workdayOn, moodleBack }, { moodleOff: "", workdayOn: "lsu-dark", moodleBack: "lsu-dark" });
+    await ctx.close();
+
     // AMOLED: the same Workday page, with the true-black palette
     const amoled = () => localStorage.setItem("lsu-moodle-dark", JSON.stringify({ enabled: true, amoled: true }));
     ctx = await newContext({}, amoled);

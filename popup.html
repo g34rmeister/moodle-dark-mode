@@ -38,6 +38,12 @@
     }
     input[type="checkbox"]:checked { background: #6d4fc4; }
     input[type="checkbox"]:checked::after { left: 19px; background: #fdd023; }
+
+    /* Per-site switches: smaller, under a divider */
+    h2 { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid #3a3548; font-size: 12px; font-weight: 600; color: #a8a2b8; text-transform: uppercase; letter-spacing: .04em; }
+    h2 + div { margin-top: 8px; }
+    .site { font-size: 13px; }
+    .site ~ .site { margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -52,6 +58,12 @@
   <small id="auto-note" hidden>Follows your system's light/dark setting</small>
   <label class="row" id="amoled-row"><span>AMOLED black<small>True black, saves battery on OLED</small></span>
     <input type="checkbox" id="amoled"></label>
+  <h2 id="sites-label">Sites</h2>
+  <div role="group" aria-labelledby="sites-label">
+    <label class="row site"><span>Moodle</span><input type="checkbox" data-site="siteMoodle"></label>
+    <label class="row site"><span>Workday</span><input type="checkbox" data-site="siteWorkday"></label>
+    <label class="row site"><span>myLSU</span><input type="checkbox" data-site="siteMylsu"></label>
+  </div>
   <script src="popup.js"></script>
 </body>
 </html>

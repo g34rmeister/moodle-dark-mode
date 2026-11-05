@@ -2,7 +2,7 @@
 
 A dark mode for [LSU Moodle](https://moodle.lsu.edu) (Snap theme), [LSU Workday](https://workday.lsu.edu) and the [myLSU portal](https://mylsu.apps.lsu.edu), with LSU purple and gold accents. It comes as a browser extension for Chrome-family browsers and Firefox (desktop and Android), and as a userscript for Safari and other mobile browsers.
 
-> Unofficial student project, not affiliated with or endorsed by Louisiana State University. It only changes how these sites look in your own browser. It sends no data anywhere and stores just your on/off and AMOLED settings.
+> Unofficial student project, not affiliated with or endorsed by Louisiana State University. It only changes how these sites look in your own browser. It sends no data anywhere and stores just your on/off, AMOLED and per-site settings.
 
 ## Features
 
@@ -32,7 +32,7 @@ Ready-made downloads (the Chrome zip, the Firefox zip and the userscript) are on
 1. Download `lsu-moodle-dark-<version>-chrome.zip` from [Releases](https://github.com/g34rmeister/moodle-dark-mode/releases) and unzip it (or download or clone this repo).
 2. Open the extensions page (`chrome://extensions`, `edge://extensions`, `brave://extensions`, ...) and turn on **Developer mode**.
 3. Click **Load unpacked** and select the unzipped folder (or this repo's folder, or `dist/build/chrome/`).
-4. Refresh Moodle, Workday or myLSU. Use the toolbar popup to set **Dark mode** (Off, On or Auto) and **AMOLED black**.
+4. Refresh Moodle, Workday or myLSU. Use the toolbar popup to set **Dark mode** (Off, On or Auto) and **AMOLED black**. If one site misbehaves, switch just that site off under **Sites**.
 
 After changing any file, click the reload icon on the extension's card, then refresh the site.
 
@@ -51,7 +51,7 @@ Safari, and Chrome on Android and iOS, don't run these extensions, so use the us
 | macOS / iOS / iPadOS Safari | The **Userscripts** app (free, App Store), then add the file to its scripts folder |
 | Android | Firefox can use the extension (above). Otherwise: Firefox or a Chromium browser with extension support (Lemur, Quetta) + **Violentmonkey** or **Tampermonkey**, then open the userscript's raw GitHub URL to install it |
 
-The userscript updates itself from this repo. Toggles: with Violentmonkey or Tampermonkey, open the add-on's menu on one of the sites and choose **Toggle dark mode**, **Toggle AMOLED black** or **Toggle follow system (Auto)**. Where a manager has no menu (iOS Userscripts), a small ◐ button appears in the bottom-left corner: tap to switch dark mode, long-press for AMOLED. The userscript doesn't reach the text editor's iframe, so that box stays light.
+The userscript updates itself from this repo. Toggles: with Violentmonkey or Tampermonkey, open the add-on's menu on one of the sites and choose **Toggle dark mode**, **Toggle AMOLED black**, **Toggle follow system (Auto)** or **Toggle on this site only**. Where a manager has no menu (iOS Userscripts), a small ◐ button appears in the bottom-left corner: tap to switch dark mode, long-press for AMOLED. The userscript doesn't reach the text editor's iframe, so that box stays light.
 
 A native Safari extension is possible but needs a Mac with Xcode (`xcrun safari-web-extension-converter dist/build/chrome`) and an Apple developer account to distribute, so it isn't built here.
 

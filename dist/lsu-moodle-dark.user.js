@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LSU Dark Mode (Unofficial)
 // @namespace    lsu-moodle-dark
-// @version      1.3.1
+// @version      1.3.2
 // @description  Unofficial dark and AMOLED theme for LSU Moodle, Workday and myLSU, with automatic contrast fixes. Not affiliated with LSU (userscript build for mobile browsers)
 // @match        https://moodle.lsu.edu/*
 // @match        https://*.myworkday.com/lsu/*
@@ -75,8 +75,20 @@ new MutationObserver(attachStyle).observe(document, { childList: true });
 
 // ---------- content.js ----------
 // Settings: `enabled` is the master switch; `auto` makes it follow the system's
-// light/dark preference; `amoled` picks the true-black palette.
-const DEFAULTS = { enabled: true, auto: false, amoled: false };
+// light/dark preference; `amoled` picks the true-black palette. `siteMoodle`,
+// `siteWorkday` and `siteMylsu` turn it off on one site only (if a page there breaks).
+const DEFAULTS = { enabled: true, auto: false, amoled: false, siteMoodle: true, siteWorkday: true, siteMylsu: true };
+
+// Which of those sites this is. self.origin, not location: an about:blank frame (the
+// editor's iframe) has an empty location but inherits its parent's origin.
+const SITE_KEY = (() => {
+  let host = "";
+  try { host = new URL(self.origin).hostname; } catch {}
+  if (!host) host = location.hostname;
+  if (/(^|\.)myworkday\.com$/.test(host)) return "siteWorkday";
+  if (host === "mylsu.apps.lsu.edu") return "siteMylsu";
+  return "siteMoodle";
+})();
 
 // chrome.storage answers asynchronously, after the page has started to paint. To
 // avoid a flash of the wrong theme, start from a copy of the last settings kept in
@@ -89,7 +101,7 @@ function saveCache() {
 }
 
 const systemDark = matchMedia("(prefers-color-scheme: dark)");
-const isDark = () => state.enabled && (!state.auto || systemDark.matches);
+const isDark = () => state.enabled && state[SITE_KEY] !== false && (!state.auto || systemDark.matches);
 
 // The <html> element is looked up each time rather than kept: in TinyMCE's editor
 // iframe (Moodle 4.1+), the page rewrites the document with document.open/write after
@@ -1047,9 +1059,12 @@ chrome.storage.onChanged.addListener((changes) => {
 // ---------- toggles (the extension uses its toolbar popup) ----------
 const settings = () => ({ ...DEFAULTS, ...readStore() }); // DEFAULTS: from content.js
 // Flips what you see right now (in Auto mode that also leaves Auto)
-const toggleDark = () => chrome.storage.sync.set({ enabled: !isDark(), auto: false });
+// (turning on also re-enables this site, if it was switched off on its own)
+const toggleDark = () => chrome.storage.sync.set(isDark() ? { enabled: false, auto: false } : { enabled: true, auto: false, [SITE_KEY]: true });
 const toggleAuto = () => chrome.storage.sync.set({ auto: !settings().auto, enabled: true });
 const toggleAmoled = () => chrome.storage.sync.set({ amoled: !settings().amoled, enabled: true });
+// This site only (SITE_KEY: from content.js), for when one site breaks
+const toggleSite = () => chrome.storage.sync.set({ [SITE_KEY]: settings()[SITE_KEY] === false });
 const registerMenu =
   (typeof GM_registerMenuCommand === "function" && GM_registerMenuCommand) ||
   (typeof GM !== "undefined" && GM && typeof GM.registerMenuCommand === "function" && GM.registerMenuCommand.bind(GM));
@@ -1058,6 +1073,7 @@ if (window.top === window) {
     registerMenu("Toggle dark mode", toggleDark);
     registerMenu("Toggle AMOLED black", toggleAmoled);
     registerMenu("Toggle follow system (Auto)", toggleAuto);
+    registerMenu("Toggle on this site only", toggleSite);
   } else {
     // No menu API (e.g. iOS Userscripts): a small floating button.
     // Tap = dark on/off, long-press = AMOLED on/off.

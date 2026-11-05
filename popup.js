@@ -1,8 +1,10 @@
-const DEFAULTS = { enabled: true, auto: false, amoled: false }; // keep in sync with content.js
+// keep in sync with content.js
+const DEFAULTS = { enabled: true, auto: false, amoled: false, siteMoodle: true, siteWorkday: true, siteMylsu: true };
 const modes = document.querySelectorAll('input[name="mode"]');
 const autoNote = document.getElementById("auto-note");
 const amoled = document.getElementById("amoled");
 const amoledRow = document.getElementById("amoled-row");
+const sites = document.querySelectorAll("input[data-site]");
 const current = { ...DEFAULTS };
 
 // The three-way mode maps onto two stored booleans, so older versions' settings still work
@@ -16,6 +18,11 @@ function render(changes) {
   amoled.checked = current.amoled;
   amoled.disabled = !current.enabled;
   amoledRow.classList.toggle("disabled", !current.enabled);
+  sites.forEach((box) => {
+    box.checked = current[box.dataset.site] !== false;
+    box.disabled = !current.enabled;
+    box.parentElement.classList.toggle("disabled", !current.enabled);
+  });
 }
 
 chrome.storage.sync.get(DEFAULTS, render);
@@ -37,3 +44,9 @@ amoled.addEventListener("change", () => {
   chrome.storage.sync.set({ amoled: amoled.checked });
   render({ amoled: amoled.checked });
 });
+
+sites.forEach((box) => box.addEventListener("change", () => {
+  const update = { [box.dataset.site]: box.checked };
+  chrome.storage.sync.set(update);
+  render(update);
+}));

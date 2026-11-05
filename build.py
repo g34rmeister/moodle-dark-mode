@@ -106,9 +106,12 @@ TOGGLES = r"""
 // ---------- toggles (the extension uses its toolbar popup) ----------
 const settings = () => ({ ...DEFAULTS, ...readStore() }); // DEFAULTS: from content.js
 // Flips what you see right now (in Auto mode that also leaves Auto)
-const toggleDark = () => chrome.storage.sync.set({ enabled: !isDark(), auto: false });
+// (turning on also re-enables this site, if it was switched off on its own)
+const toggleDark = () => chrome.storage.sync.set(isDark() ? { enabled: false, auto: false } : { enabled: true, auto: false, [SITE_KEY]: true });
 const toggleAuto = () => chrome.storage.sync.set({ auto: !settings().auto, enabled: true });
 const toggleAmoled = () => chrome.storage.sync.set({ amoled: !settings().amoled, enabled: true });
+// This site only (SITE_KEY: from content.js), for when one site breaks
+const toggleSite = () => chrome.storage.sync.set({ [SITE_KEY]: settings()[SITE_KEY] === false });
 const registerMenu =
   (typeof GM_registerMenuCommand === "function" && GM_registerMenuCommand) ||
   (typeof GM !== "undefined" && GM && typeof GM.registerMenuCommand === "function" && GM.registerMenuCommand.bind(GM));
@@ -117,6 +120,7 @@ if (window.top === window) {
     registerMenu("Toggle dark mode", toggleDark);
     registerMenu("Toggle AMOLED black", toggleAmoled);
     registerMenu("Toggle follow system (Auto)", toggleAuto);
+    registerMenu("Toggle on this site only", toggleSite);
   } else {
     // No menu API (e.g. iOS Userscripts): a small floating button.
     // Tap = dark on/off, long-press = AMOLED on/off.
