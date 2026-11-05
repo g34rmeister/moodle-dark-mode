@@ -100,6 +100,17 @@ setTimeout(() => document.getElementById("fade").classList.add("sel"), 700);
 // A class change on a card re-checks it and its light children; that must not
 // switch dark mode off and on (each switch restyles the whole page)
 window.__flips = "not run";
+// Content arriving after load (a grid's rows) must not switch dark mode off either
+window.__loadFlips = "not run";
+setTimeout(() => {
+  let n = 0;
+  const mo = new MutationObserver((ms) => { n += ms.length; });
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  const card = document.createElement("div"); card.className = "card"; card.style.width = "200px";
+  card.innerHTML = '<div style="background:#f6f7f8;height:20px">row</div><div style="background:#fff">cell</div>';
+  document.getElementById("page").appendChild(card);
+  setTimeout(() => { mo.disconnect(); window.__loadFlips = n; }, 400);
+}, 1100);
 setTimeout(() => {
   let n = 0;
   const mo = new MutationObserver((ms) => { n += ms.length; });
@@ -168,6 +179,7 @@ setTimeout(() => {
     fadeBg: cs("fade").backgroundColor,
     rafBoxFirstPaint: window.__lateSeen,
     rescanFlips: window.__flips,
+    newContentFlips: window.__loadFlips,
   });
 }, 2000);
 </script></body></html>

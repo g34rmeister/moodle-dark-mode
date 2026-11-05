@@ -63,6 +63,7 @@ const EXPECT = {
     fadeBg: "color(srgb 0.304 0.289647 0.336235)", // a 4 s fade to a pale tint is fixed as it starts
     rafBoxFirstPaint: SURFACE,           // content added in a frame callback is dark before that paint
     rescanFlips: 0,                      // a re-check uses remembered light colors: no page-wide restyle
+    newContentFlips: 0,                  // nor does new content: untouched elements read as they are
     tokBg: SURFACE, tokText: TEXT, tokBorder: BORDER, // Canvas Kit tokens redefined in workday.css
     tokMarks: "",                        // so the script had nothing to fix
     stripPopBg: SURFACE,                 // a white pop-up with a tiled strip image is darkened
@@ -316,7 +317,7 @@ async function testWebKit() {
     const a = await ctx.newPage();
     await a.goto(pageUrl("lsu/workday.html"));
     check("webkit", "amoled lsu/workday.html", await waitResult(() => a.locator("#out").textContent()), {
-      htmlClass: "lsu-amoled lsu-dark",
+      htmlClass: "lsu-dark lsu-amoled",
       pageBg: "rgb(0, 0, 0)",            // pixels off
       cardBg: "rgb(11, 10, 15)",         // AMOLED surface
       cardText: TEXT,

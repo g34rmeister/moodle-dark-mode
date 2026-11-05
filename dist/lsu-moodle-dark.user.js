@@ -358,7 +358,18 @@ function lightBgBehind(el, live) {
   let floating = false;
   for (let e = el.parentElement; e && e !== root; e = e.parentElement) {
     let v = lightBgs.get(e);
-    if (!v) { if (!live) return undefined; v = lightOwnBg(e); }
+    if (!v && live) v = lightOwnBg(e);
+    else if (!v) {
+      // Dark mode is on. An element we haven't recolored shows its own color, the
+      // same as in light mode (except colors from Workday's Canvas tokens, which
+      // workday.css darkens: a box on one reads as on dark, which ends the same:
+      // the card color). <body> is darkened by base.css: count it as the canvas.
+      // Only elements we recolored need their light color remembered.
+      if (e.dataset.dmBg !== undefined || e.dataset.dmInline?.includes('"background-color"')) return undefined;
+      if (e === document.body) continue;
+      const cs = getComputedStyle(e);
+      v = { c: parse(cs.backgroundColor), photo: photo(cs) };
+    }
     if (v.photo) return null;
     const c = v.c;
     if (c && c.a >= 0.5) return { ...c, floating, from: e };
