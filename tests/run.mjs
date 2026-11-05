@@ -59,6 +59,7 @@ const EXPECT = {
     chipBg: "color(srgb 0.277255 0.243922 0.332784)", // a pastel chip gets a dark tint of its hue
     stepBg: SURFACE_2,                   // a grey tab on a white card stays a step apart
     blueLink: "rgb(108, 172, 236)",      // link blue on the dark page is lightened
+    bodyLink: "rgb(108, 172, 236)",      // also straight on <body>
     blueRowText: "rgb(255, 255, 255)",   // grey text on a blue selected row: white (theme text falls short)
     blueChipText: "rgb(255, 255, 255)",  // white on a bright blue chip stays white
     olCardOutline: BORDER,               // a light grey outline gets the border color
@@ -316,6 +317,7 @@ async function testWebKit() {
       lateText: TEXT,
       ruleBg: "rgb(44, 40, 54)",         // AMOLED border
       barBg: "rgb(11, 10, 15)",
+      bodyLink: "rgb(108, 172, 236)",    // judged against the dark page, not AMOLED black
     });
     await ctx.close();
   } finally {

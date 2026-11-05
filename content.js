@@ -470,7 +470,10 @@ function makeBgFinder() {
   return function effectiveBg(el) {
     const path = [];
     let result = PAGE_BG;
-    for (let e = el; e && e !== root; e = e.parentElement) {
+    // <body> counts as the dark page whatever the mode: in AMOLED it reads black,
+    // and text judged against black (Workday's link blue passes there) would fall
+    // short once the user switches to the lighter dark palette, which doesn't rescan
+    for (let e = el; e && e !== root && e !== document.body; e = e.parentElement) {
       if (cache.has(e)) { result = cache.get(e); break; }
       path.push(e);
       const own = ourBg(e);
