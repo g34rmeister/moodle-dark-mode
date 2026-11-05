@@ -2,7 +2,7 @@
   "name": "lsu-moodle-dark-tests",
   "private": true,
   "type": "module",
-  "description": "Browser tests for LSU Moodle Dark (see run.mjs)",
+  "description": "Browser tests for LSU Dark Mode (see run.mjs)",
   "scripts": {
     "test": "node run.mjs"
   },

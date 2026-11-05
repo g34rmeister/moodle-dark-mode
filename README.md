@@ -1,4 +1,4 @@
-# LSU Moodle Dark
+# LSU Dark Mode
 
 A dark mode for [LSU Moodle](https://moodle.lsu.edu) (Snap theme), [LSU Workday](https://workday.lsu.edu) and the [myLSU portal](https://mylsu.apps.lsu.edu), with LSU purple and gold accents. It comes as a browser extension for Chrome-family browsers and Firefox (desktop and Android), and as a userscript for Safari and other mobile browsers.
 

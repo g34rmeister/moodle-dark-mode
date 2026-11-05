@@ -4,10 +4,12 @@ Outputs (store/):
   screenshot-1-light-vs-dark.png   1280x800
   screenshot-2-amoled.png          1280x800
   screenshot-3-dark.png            1280x800
+  screenshot-4-workday.png         1280x800
   promo-small-440x280.png          440x280
 
-The captures are of the public LSU Moodle front page, with the profile picture and
-cookie banner hidden. Fonts are Windows' Segoe UI; adjust FONT_DIR elsewhere.
+light/dark/amoled.jpg are the public LSU Moodle front page, with the profile picture
+and cookie banner hidden. workday.jpg is the Workday home page in dark mode, with the
+greeting (which shows your name) replaced and no menus open. Fonts are Windows' Segoe UI; adjust FONT_DIR elsewhere.
 
 Usage:  python store/make_store_images.py
 """
@@ -66,15 +68,21 @@ frame(amoled, "AMOLED black", "True-black background: OLED pixels switch off, sa
 frame(dark, "Readable everywhere", "Leftover light boxes and low-contrast text are fixed automatically.") \
     .save(HERE / "screenshot-3-dark.png")
 
+if (RAW / "workday.jpg").exists():
+    frame(capture("workday"), "Workday and myLSU too", "The same theme and settings on LSU Workday and the myLSU portal.") \
+        .save(HERE / "screenshot-4-workday.png")
+else:
+    print("skipped screenshot-4-workday.png: add store/raw/workday.jpg (see the top of this file)")
+
 # Small promo tile: icon + name on LSU purple
 tile = Image.new("RGB", (440, 280), PURPLE)
 icon = Image.open(HERE.parent / "icons" / "icon-128.png").convert("RGBA")
 icon = icon.crop((16, 16, 112, 112)).resize((120, 120), Image.LANCZOS)  # drop store padding
 tile.paste(icon, (36, 80), icon)
 d = ImageDraw.Draw(tile)
-d.text((180, 92), "Moodle Dark", font=font(True, 34), fill=(255, 255, 255))
-d.text((181, 140), "Dark & AMOLED theme", font=font(False, 20), fill=GOLD)
-d.text((181, 168), "for LSU Moodle", font=font(False, 20), fill=GOLD)
+d.text((180, 96), "LSU Dark Mode", font=font(True, 30), fill=(255, 255, 255))
+d.text((181, 140), "Dark & AMOLED theme for", font=font(False, 20), fill=GOLD)
+d.text((181, 168), "Moodle, Workday, myLSU", font=font(False, 20), fill=GOLD)
 d.text((181, 206), "Unofficial", font=font(False, 14), fill=(200, 190, 225))
 tile.save(HERE / "promo-small-440x280.png")
 

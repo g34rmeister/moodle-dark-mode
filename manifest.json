@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "LSU Moodle Dark (Unofficial)",
-  "short_name": "Moodle Dark",
+  "name": "LSU Dark Mode (Unofficial)",
+  "short_name": "LSU Dark",
   "version": "1.3.0",
   "description": "Unofficial dark and AMOLED theme for LSU Moodle, Workday and myLSU, with automatic contrast fixes. Not affiliated with LSU.",
   "icons": {
@@ -63,7 +63,7 @@
     }
   ],
   "action": {
-    "default_title": "LSU Moodle Dark",
+    "default_title": "LSU Dark Mode",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon-16.png",

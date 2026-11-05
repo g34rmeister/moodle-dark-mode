@@ -8,7 +8,7 @@ Run `python build.py`, then upload `dist/lsu-moodle-dark-<version>-chrome.zip` (
 
 ## Store listing tab
 
-**Name** (from the manifest): LSU Moodle Dark (Unofficial)
+**Name** (from the manifest): LSU Dark Mode (Unofficial)
 
 **Summary** (from the manifest, 132 characters max):
 > Unofficial dark and AMOLED theme for LSU Moodle, Workday and myLSU, with automatic contrast fixes. Not affiliated with LSU.
@@ -37,7 +37,7 @@ Unofficial student project, not affiliated with or endorsed by Louisiana State U
 | Asset | File |
 | --- | --- |
 | Store icon 128×128 | `../icons/icon-128.png` |
-| Screenshots 1280×800 | `screenshot-1-light-vs-dark.png`, `screenshot-2-amoled.png`, `screenshot-3-dark.png` |
+| Screenshots 1280×800 | `screenshot-1-light-vs-dark.png`, `screenshot-2-amoled.png`, `screenshot-3-dark.png` (and `screenshot-4-workday.png` once `raw/workday.jpg` is captured) |
 | Small promo tile 440×280 | `promo-small-440x280.png` |
 
 ## Privacy practices tab
