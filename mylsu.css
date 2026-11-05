@@ -2,18 +2,21 @@
    first. content.js handles the page itself; these are the images it can't recolor. */
 html.lsu-dark {
 
-  /* "myLSU" wordmark: gold "my" + dark purple "LSU" in one image, designed for the
-     white header. Any filter changes LSU's colors (brightening turned the gold neon,
-     an outline glowed), so give it its white header back as a small rounded plate.
-     box-shadow draws the margin without changing the layout. */
-  img.logo.tenantbig {
-    background-color: #ffffff;
-    border-radius: 4px;
-    box-shadow: 0 0 0 6px #ffffff;
-  }
+  /* The "myLSU" wordmark (img.logo.tenantbig) is left exactly as myLSU ships it:
+     filters changed LSU's colors (brightening turned the gold neon, an outline
+     glowed) and a white plate looked like a frame. */
 
   /* Header icons (notification bell) are dark line-art SVG images */
   img.dock-menu-icon { filter: brightness(0) invert(0.9); }
+
+  /* Search Apps box: in light mode a white pill on the grey sidebar. content.js
+     gives it the raised color, but on AMOLED that is barely above the sidebar, so
+     add a thin edge too. Its magnifier is a dark image (img.searchicon) whose
+     filter myLSU sets with an ID selector. */
+  .searchbox-container { box-shadow: 0 0 0 1px var(--dm-border) !important; }
+  #sidebar img.searchicon, .searchbox-container img.searchicon {
+    filter: brightness(0) invert(0.8) !important;
+  }
 
   /* Sidebar icons that are still <img> files (most are inline SVGs, which content.js
      recolors to a light lavender). This filter turns any image that lavender
