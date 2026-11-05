@@ -86,6 +86,7 @@
 <div class="card" style="width:220px"><div class="fade" id="fade">Personal</div></div>
 <div class="card" id="trnCard" style="width:200px"><div class="trn" id="trn">Receipts</div></div>
 <div id="hatch" style="width:200px;height:60px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%23f0f1f2'/%3E%3Cpath d='M0 8L8 0' stroke='%23e0e2e4'/%3E%3C/svg%3E&quot;)"><span id="hatchText" style="color:#2b2b2b">Hours Worked</span></div>
+<div class="card" style="width:240px"><div id="iconRow" style="height:29px;padding-left:24px;background:oklch(0.969 0.0155 248.07) url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Crect width='12' height='12' fill='%23666'/%3E%3C/svg%3E&quot;) no-repeat 4px center;color:#2b2b2b">Additional Data</div></div>
 <div class="bar" id="bar"><button>OK</button></div>
 </div>
 <div class="pop" id="pop">Unread</div>
@@ -189,6 +190,9 @@ setTimeout(() => {
     fadeBg: cs("fade").backgroundColor,
     rafBoxFirstPaint: window.__lateSeen,
     rescanFlips: window.__flips,
+    iconRowText: cs("iconRow").color,
+    iconRowDark: (() => { const m = cs("iconRow").backgroundColor.match(/[\d.]+/g).map(Number); return (m[0] + m[1] + m[2]) < 1.5 || (m[0] + m[1] + m[2]) < 300; })(),
+    iconRowImage: cs("iconRow").backgroundImage.startsWith("url("),
     hatchBg: cs("hatch").backgroundColor,
     hatchText: cs("hatchText").color,
     trnAfterRecheck: window.__trnAnims,

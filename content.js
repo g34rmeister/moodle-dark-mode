@@ -159,11 +159,12 @@ function ensureSheet() {
 }
 const SIDES = { t: "top", r: "right", b: "bottom", l: "left" };
 sheet.textContent =
-  `html.lsu-dark [data-dm-bg="page"]${HI} { background-color: ${PAGE} !important; background-image: none !important; }\n` +
-  `html.lsu-dark [data-dm-bg="solid"]${HI} { background-color: ${SURFACE} !important; background-image: none !important; }\n` +
-  `html.lsu-dark :is([data-dm-bg="hover"], [data-dm-bg="raised"], [data-dm-bg="tint"])${HI} { background-color: ${RAISED} !important; background-image: none !important; }\n` +
+  `html.lsu-dark [data-dm-bg="page"]${HI} { background-color: ${PAGE} !important; }\n` +
+  `html.lsu-dark [data-dm-bg="solid"]${HI} { background-color: ${SURFACE} !important; }\n` +
+  `html.lsu-dark :is([data-dm-bg="hover"], [data-dm-bg="raised"], [data-dm-bg="tint"])${HI} { background-color: ${RAISED} !important; }\n` +
   `html.lsu-dark [data-dm-bg="overlay"]${HI} { background-color: ${OVERLAY} !important; }\n` +
-  `html.lsu-dark [data-dm-bg="clear"]${HI} { background-color: transparent !important; background-image: none !important; }\n` +
+  `html.lsu-dark [data-dm-bg="clear"]${HI} { background-color: transparent !important; }\n` +
+  `html.lsu-dark :is([data-dm-bg="page"], [data-dm-bg="solid"], [data-dm-bg="hover"], [data-dm-bg="raised"], [data-dm-bg="tint"], [data-dm-bg="clear"], [data-dm-bg="accent"]):not([data-dm-img])${HI} { background-image: none !important; }\n` +
   `html.lsu-dark [data-dm-bg="pattern"]${HI} { background-color: ${SURFACE} !important; background-image: ${HATCH} !important; }\n` +
   Object.entries(SIDES).map(([k, side]) =>
     `html.lsu-dark [data-dm-bd~="${k}"]${HI} { border-${side}-color: ${BORDER} !important; }\n` +
@@ -206,9 +207,17 @@ function decorative(cs) {
   return cs.backgroundImage.includes("url(") && !cs.backgroundRepeat.split(",").some((r) => r.includes("no-repeat")) &&
     !/cover|contain/.test(cs.backgroundSize); // a photo sized to fill (Moodle's course cards)
 }
-function photo(cs) {
-  return cs.backgroundImage.includes("url(") && !decorative(cs);
+// A small image drawn at one spot (Workday's document icon at the left of a list
+// row): the box's own color shows around it, so it is darkened like any light box,
+// keeping the image.
+function iconImage(cs) {
+  return cs.backgroundImage.includes("url(") && cs.backgroundRepeat.split(",").every((r) => r.includes("no-repeat")) &&
+    !/cover|contain/.test(cs.backgroundSize);
 }
+function photo(cs) {
+  return cs.backgroundImage.includes("url(") && !decorative(cs) && !iconImage(cs);
+}
+const keepImage = new WeakSet();
 
 const accentOf = new WeakMap();
 const pastel = (c) => (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b)) / 510 > 0.78 && luminance(c) > 0.4;
@@ -218,7 +227,7 @@ function accentId(c) {
   const key = rgbKey(c);
   if (!accentIds.has(key)) {
     accentIds.set(key, accentIds.size);
-    sheet.textContent += `html.lsu-dark [data-dm-ac="${accentIds.get(key)}"]${HI} { background-color: ${accentValue(c)} !important; background-image: none !important; }
+    sheet.textContent += `html.lsu-dark [data-dm-ac="${accentIds.get(key)}"]${HI} { background-color: ${accentValue(c)} !important; }
 `;
   }
   return accentIds.get(key);
@@ -240,11 +249,13 @@ function planBg(el) {
   // side menu) would turn the same card color as the menu. Both get a dark tint of
   // their own hue, so a selected item still reads as selected. Pale tints only on
   // small boxes: a big pale panel is a card. Strong colors (LSU gold) are left alone.
-  if (img === "none" && bg && bg.a >= 0.95 && pastel(bg)) {
+  const icon = iconImage(cs);
+  if (icon) keepImage.add(el); else keepImage.delete(el);
+  if ((img === "none" || icon) && bg && bg.a >= 0.95 && pastel(bg)) {
     const spread = Math.max(bg.r, bg.g, bg.b) - Math.min(bg.r, bg.g, bg.b);
     if (spread >= 60 || (spread >= 12 && el.getBoundingClientRect().height <= 80)) { accentOf.set(el, bg); return "accent"; }
   }
-  if ((img === "none" || decorative(cs)) && light(bg)) return bg.a < 0.95 ? "overlay" : "solid";
+  if ((img === "none" || decorative(cs) || icon) && light(bg)) return bg.a < 0.95 ? "overlay" : "solid";
   // A pattern with no color under it: Workday's "Not Submitted" time blocks are a
   // tiled light stripe image on a transparent box. They keep a stripe, a dark one.
   if (decorative(cs) && (!bg || bg.a < 0.3)) {
@@ -401,6 +412,13 @@ function resolveClear(els, bgPlans) {
 }
 
 function applyBg(el, kind) {
+  const keep = keepImage.has(el);
+  if (keep && !el.hasAttribute("style")) el.dataset.dmImg = "";
+  if (keep && el.hasAttribute("style") && kind !== "pattern" && kind !== "overlay") {
+    setInline(el, "background-color", kind === "accent" ? accentValue(accentOf.get(el)) : kind === "clear" ? "transparent" :
+      kind === "page" ? PAGE : kind === "solid" ? SURFACE : RAISED);
+    return;
+  }
   if (kind === "accent") {
     const c = accentOf.get(el);
     if (!el.hasAttribute("style")) { el.dataset.dmBg = kind; el.dataset.dmAc = accentId(c); }
@@ -744,6 +762,7 @@ function scanElements(node) {
       delete el.dataset.dmBg;
       delete el.dataset.dmEdge;
       delete el.dataset.dmAc;
+      delete el.dataset.dmImg;
       unsetInline(el, "background-color");
       unsetInline(el, "background-image");
     }
@@ -799,6 +818,7 @@ function restoreAll() {
   document.querySelectorAll("[data-dm-ol]").forEach((el) => delete el.dataset.dmOl);
   document.querySelectorAll("[data-dm-edge]").forEach((el) => delete el.dataset.dmEdge);
   document.querySelectorAll("[data-dm-ac]").forEach((el) => delete el.dataset.dmAc);
+  document.querySelectorAll("[data-dm-img]").forEach((el) => delete el.dataset.dmImg);
 }
 
 // Batch DOM changes (AJAX content, drawers opening, hover states) into one scan per
