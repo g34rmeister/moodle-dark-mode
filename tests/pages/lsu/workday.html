@@ -85,6 +85,7 @@
 <div id="blueChip" style="background:#007df6;color:#fff">is on</div>
 <div class="card" style="width:220px"><div class="fade" id="fade">Personal</div></div>
 <div class="card" id="trnCard" style="width:200px"><div class="trn" id="trn">Receipts</div></div>
+<div id="hatch" style="width:200px;height:60px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%23f0f1f2'/%3E%3Cpath d='M0 8L8 0' stroke='%23e0e2e4'/%3E%3C/svg%3E&quot;)"><span id="hatchText" style="color:#2b2b2b">Hours Worked</span></div>
 <div class="bar" id="bar"><button>OK</button></div>
 </div>
 <div class="pop" id="pop">Unread</div>
@@ -188,6 +189,8 @@ setTimeout(() => {
     fadeBg: cs("fade").backgroundColor,
     rafBoxFirstPaint: window.__lateSeen,
     rescanFlips: window.__flips,
+    hatchBg: cs("hatch").backgroundColor,
+    hatchText: cs("hatchText").color,
     trnAfterRecheck: window.__trnAnims,
     newContentFlips: window.__loadFlips,
   });

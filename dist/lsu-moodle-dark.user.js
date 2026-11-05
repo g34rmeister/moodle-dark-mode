@@ -126,6 +126,7 @@ const LINE = "var(--dm-muted)";       // drawn lines that were near-black
 const FAINT = "color-mix(in srgb, var(--dm-text) 35%, transparent)"; // see planBorders
 const OVERLAY = "var(--dm-overlay)";
 const BORDER = "var(--dm-border)";
+const HATCH = "repeating-linear-gradient(135deg, transparent 0 8px, rgba(255, 255, 255, 0.05) 8px 16px)";
 // Contrast math assumes the lighter (dark, not AMOLED) page: if text passes there,
 // it passes on true black too.
 const PAGE_BG = { r: 21, g: 19, b: 27, a: 1 };
@@ -239,6 +240,7 @@ sheet.textContent =
   `html.lsu-dark :is([data-dm-bg="hover"], [data-dm-bg="raised"], [data-dm-bg="tint"])${HI} { background-color: ${RAISED} !important; background-image: none !important; }\n` +
   `html.lsu-dark [data-dm-bg="overlay"]${HI} { background-color: ${OVERLAY} !important; }\n` +
   `html.lsu-dark [data-dm-bg="clear"]${HI} { background-color: transparent !important; background-image: none !important; }\n` +
+  `html.lsu-dark [data-dm-bg="pattern"]${HI} { background-color: ${SURFACE} !important; background-image: ${HATCH} !important; }\n` +
   Object.entries(SIDES).map(([k, side]) =>
     `html.lsu-dark [data-dm-bd~="${k}"]${HI} { border-${side}-color: ${BORDER} !important; }\n` +
     `html.lsu-dark [data-dm-bs~="${k}"]${HI} { border-${side}-color: ${LINE} !important; }\n` +
@@ -319,6 +321,12 @@ function planBg(el) {
     if (spread >= 60 || (spread >= 12 && el.getBoundingClientRect().height <= 80)) { accentOf.set(el, bg); return "accent"; }
   }
   if ((img === "none" || decorative(cs)) && light(bg)) return bg.a < 0.95 ? "overlay" : "solid";
+  // A pattern with no color under it: Workday's "Not Submitted" time blocks are a
+  // tiled light stripe image on a transparent box. They keep a stripe, a dark one.
+  if (decorative(cs) && (!bg || bg.a < 0.3)) {
+    const r = el.getBoundingClientRect();
+    if (r.width >= 40 && r.height >= 20) return "pattern";
+  }
   // A faint dark tint: Workday marks the selected item (My Tasks' "All Items") with
   // 5% navy. A visible shade on white, nothing on dark, so it gets the raised color.
   // Small boxes only, so a translucent black backdrop behind a dialog is left alone.
@@ -422,7 +430,7 @@ function decideClear(els, bgPlans, i, own, behind, planOf) {
 // separately would draw a dark bar per heading/paragraph. So for each light background,
 // compare it with what was behind it *in light mode*: if they match, go transparent.
 function resolveClear(els, bgPlans) {
-  const idx = bgPlans.map((p, i) => (p && p !== "tint" ? i : -1)).filter((i) => i >= 0);
+  const idx = bgPlans.map((p, i) => (p && p !== "tint" && p !== "pattern" ? i : -1)).filter((i) => i >= 0);
   if (!idx.length) return;
   const root = html();
   // The plan for an ancestor: from this scan (ancestors come first in `els`, so it is
@@ -475,6 +483,9 @@ function applyBg(el, kind) {
     else { setInline(el, "background-color", accentValue(c)); setInline(el, "background-image", "none"); }
   } else if (!el.hasAttribute("style")) {
     el.dataset.dmBg = kind;
+  } else if (kind === "pattern") {
+    setInline(el, "background-color", SURFACE);
+    setInline(el, "background-image", HATCH);
   } else if (kind === "clear") {
     setInline(el, "background-color", "transparent");
     setInline(el, "background-image", "none");
@@ -577,7 +588,7 @@ function hasOwnText(el) {
 // reads white, and the text on it would be judged against white.
 const SURFACE_RGB = { r: 30, g: 27, b: 38, a: 1 };
 const RAISED_RGB = { r: 40, g: 36, b: 50, a: 1 };
-const OURS = { page: PAGE_BG, solid: SURFACE_RGB, hover: RAISED_RGB, raised: RAISED_RGB, tint: RAISED_RGB, overlay: PAGE_BG, clear: null,
+const OURS = { page: PAGE_BG, solid: SURFACE_RGB, hover: RAISED_RGB, raised: RAISED_RGB, tint: RAISED_RGB, pattern: SURFACE_RGB, overlay: PAGE_BG, clear: null,
   [PAGE]: PAGE_BG, [SURFACE]: SURFACE_RGB, [RAISED]: RAISED_RGB, [OVERLAY]: PAGE_BG, transparent: null };
 function ourBg(e) {
   if (e.dataset.dmBg) return OURS[e.dataset.dmBg];
