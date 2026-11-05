@@ -123,6 +123,7 @@ const PAGE = "var(--dm-bg)";
 const SURFACE = "var(--dm-surface)";
 const RAISED = "var(--dm-surface-2)"; // hover highlights
 const LINE = "var(--dm-muted)";       // drawn lines that were near-black
+const FAINT = "color-mix(in srgb, var(--dm-text) 35%, transparent)"; // see planBorders
 const OVERLAY = "var(--dm-overlay)";
 const BORDER = "var(--dm-border)";
 // Contrast math assumes the lighter (dark, not AMOLED) page: if text passes there,
@@ -231,12 +232,13 @@ const SIDES = { t: "top", r: "right", b: "bottom", l: "left" };
 sheet.textContent =
   `html.lsu-dark [data-dm-bg="page"]${HI} { background-color: ${PAGE} !important; background-image: none !important; }\n` +
   `html.lsu-dark [data-dm-bg="solid"]${HI} { background-color: ${SURFACE} !important; background-image: none !important; }\n` +
-  `html.lsu-dark :is([data-dm-bg="hover"], [data-dm-bg="raised"])${HI} { background-color: ${RAISED} !important; background-image: none !important; }\n` +
+  `html.lsu-dark :is([data-dm-bg="hover"], [data-dm-bg="raised"], [data-dm-bg="tint"])${HI} { background-color: ${RAISED} !important; background-image: none !important; }\n` +
   `html.lsu-dark [data-dm-bg="overlay"]${HI} { background-color: ${OVERLAY} !important; }\n` +
   `html.lsu-dark [data-dm-bg="clear"]${HI} { background-color: transparent !important; background-image: none !important; }\n` +
   Object.entries(SIDES).map(([k, side]) =>
     `html.lsu-dark [data-dm-bd~="${k}"]${HI} { border-${side}-color: ${BORDER} !important; }\n` +
-    `html.lsu-dark [data-dm-bs~="${k}"]${HI} { border-${side}-color: ${LINE} !important; }\n`).join("") +
+    `html.lsu-dark [data-dm-bs~="${k}"]${HI} { border-${side}-color: ${LINE} !important; }\n` +
+    `html.lsu-dark [data-dm-bm~="${k}"]${HI} { border-${side}-color: ${FAINT} !important; }\n`).join("") +
   `html.lsu-dark [data-dm-edge]${HI} { box-shadow: 0 0 0 1px ${BORDER} !important; }\n` +
   // Used by full-page scans (see scan): cancels running transitions so computed
   // colors are final values, not mid-fade ones.
@@ -277,6 +279,11 @@ function planBg(el) {
     return luminance(c) > 0.5 && (spread < 60 || luminance(c) > 0.85);
   };
   if (img === "none" && light(bg)) return bg.a < 0.95 ? "overlay" : "solid";
+  // A faint dark tint: Workday marks the selected item (My Tasks' "All Items") with
+  // 5% navy. A visible shade on white, nothing on dark, so it gets the raised color.
+  // Small boxes only, so a translucent black backdrop behind a dialog is left alone.
+  if (img === "none" && bg && bg.a >= 0.03 && bg.a < 0.3 && luminance(bg) < 0.2 &&
+    el.getBoundingClientRect().height <= 80) return "tint";
   if (img.startsWith("linear-gradient") && !img.includes("url(")) {
     if (light(parse(img.match(/(?:rgba?|oklch|oklab|lab|lch|color|hwb|hsla?)\([^)]*\)/)?.[0]))) return "solid";
   }
@@ -341,7 +348,7 @@ function floats(el) {
 // separately would draw a dark bar per heading/paragraph. So for each light background,
 // compare it with what was behind it *in light mode*: if they match, go transparent.
 function resolveClear(els, bgPlans) {
-  const idx = bgPlans.map((p, i) => (p ? i : -1)).filter((i) => i >= 0);
+  const idx = bgPlans.map((p, i) => (p && p !== "tint" ? i : -1)).filter((i) => i >= 0);
   if (!idx.length) return;
   const root = html();
   const wasFrozen = root.classList.contains("lsu-dm-freeze");
@@ -382,7 +389,7 @@ function applyBg(el, kind) {
   } else if (kind === "clear") {
     setInline(el, "background-color", "transparent");
     setInline(el, "background-image", "none");
-  } else if (kind === "solid" || kind === "page" || kind === "hover" || kind === "raised") {
+  } else if (kind === "solid" || kind === "page" || kind === "hover" || kind === "raised" || kind === "tint") {
     setInline(el, "background-color", kind === "page" ? PAGE : kind === "solid" ? SURFACE : RAISED);
     setInline(el, "background-image", "none");
   } else {
@@ -396,33 +403,40 @@ function applyBg(el, kind) {
 // which vanish on dark: they get the muted text color, so they stay lines. Our own
 // border colors are dark greys well above near-black, so they are never re-caught.
 // Colored borders (LSU gold bars, red accents) are left alone. Returns null or
-// { soft: "t l", strong: "b" } (either may be empty).
+// { soft: "t l", strong: "b", faint: "" } (any may be empty).
+// Translucent dark borders (`faint`; Workday's outlined inputs and round icon
+// buttons, navy at 35%) are mid-grey lines on white. They get light at 35%, which
+// keeps them as visible as in light mode; the border color would be dimmer.
 function planBorders(el) {
   const cs = getComputedStyle(el);
-  const soft = [], strong = [];
+  const soft = [], strong = [], faint = [];
   // Sides we already recolored read as our colors now; judging them again would
   // take our muted line for a light-grey border
-  const done = `${el.dataset.dmBd || ""} ${el.dataset.dmBs || ""}`.split(" ");
+  const done = `${el.dataset.dmBd || ""} ${el.dataset.dmBs || ""} ${el.dataset.dmBm || ""}`.split(" ");
   for (const [k, side] of Object.entries(SIDES)) {
     if (done.includes(k) || el.dataset.dmInline?.includes(`"border-${side}-color"`)) continue;
     if (parseFloat(cs[`border-${side}-width`]) === 0 || cs[`border-${side}-style`] === "none") continue;
     const c = parse(cs[`border-${side}-color`]);
     if (!c) continue;
-    const spread = Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b);
+    // Judged as it shows on white (the same as c when opaque)
+    const w = { r: c.r * c.a + 255 * (1 - c.a), g: c.g * c.a + 255 * (1 - c.a), b: c.b * c.a + 255 * (1 - c.a) };
+    const spread = Math.max(w.r, w.g, w.b) - Math.min(w.r, w.g, w.b);
     if (spread >= 40) continue;
-    if (c.a >= 0.2 && luminance(c) > 0.35) soft.push(k);
-    else if (c.a >= 0.5 && luminance(c) < 0.01) strong.push(k);
+    if (c.a >= 0.5 && luminance(c) < 0.01) strong.push(k);
+    else if (c.a >= 0.2 && luminance(w) > 0.35) (c.a < 1 && luminance(c) < 0.2 ? faint : soft).push(k);
   }
-  return soft.length || strong.length ? { soft: soft.join(" "), strong: strong.join(" ") } : null;
+  return soft.length || strong.length || faint.length ?
+    { soft: soft.join(" "), strong: strong.join(" "), faint: faint.join(" ") } : null;
 }
 
-function applyBorders(el, { soft, strong }) {
+function applyBorders(el, { soft, strong, faint }) {
   if (!el.hasAttribute("style")) {
     const add = (key, sides) => { if (sides) el.dataset[key] = `${el.dataset[key] || ""} ${sides}`.trim(); };
     add("dmBd", soft);
     add("dmBs", strong);
+    add("dmBm", faint);
   } else {
-    for (const [sides, color] of [[soft, BORDER], [strong, LINE]]) {
+    for (const [sides, color] of [[soft, BORDER], [strong, LINE], [faint, FAINT]]) {
       if (sides) sides.split(" ").forEach((k) => setInline(el, `border-${SIDES[k]}-color`, color));
     }
   }
@@ -452,7 +466,7 @@ function hasOwnText(el) {
 // reads white, and the text on it would be judged against white.
 const SURFACE_RGB = { r: 30, g: 27, b: 38, a: 1 };
 const RAISED_RGB = { r: 40, g: 36, b: 50, a: 1 };
-const OURS = { page: PAGE_BG, solid: SURFACE_RGB, hover: RAISED_RGB, raised: RAISED_RGB, overlay: PAGE_BG, clear: null,
+const OURS = { page: PAGE_BG, solid: SURFACE_RGB, hover: RAISED_RGB, raised: RAISED_RGB, tint: RAISED_RGB, overlay: PAGE_BG, clear: null,
   [PAGE]: PAGE_BG, [SURFACE]: SURFACE_RGB, [RAISED]: RAISED_RGB, [OVERLAY]: PAGE_BG, transparent: null };
 function ourBg(e) {
   if (e.dataset.dmBg) return OURS[e.dataset.dmBg];
@@ -721,6 +735,7 @@ function restoreAll() {
   }
   document.querySelectorAll("[data-dm-bd]").forEach((el) => delete el.dataset.dmBd);
   document.querySelectorAll("[data-dm-bs]").forEach((el) => delete el.dataset.dmBs);
+  document.querySelectorAll("[data-dm-bm]").forEach((el) => delete el.dataset.dmBm);
   document.querySelectorAll("[data-dm-edge]").forEach((el) => delete el.dataset.dmEdge);
 }
 

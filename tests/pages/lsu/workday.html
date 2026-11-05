@@ -58,6 +58,9 @@
 <div class="org-card" id="orgCard">Khanh</div><span class="org-line" id="orgLine"></span>
 <div class="prow" id="prow">Computing Services</div>
 <div class="side" id="side"><div class="pill" id="pill"></div></div>
+<!-- My Tasks: selected item = 5% dark tint; round sort button = 35% dark border -->
+<button id="tintPill" style="all:unset;display:block;height:44px;width:200px;border-radius:600px;background:oklch(0.3343 0.0951 253.3 / 0.05)">All Items</button>
+<button id="ringBtn" style="all:unset;display:block;width:32px;height:32px;border-radius:600px;border:1px solid oklch(0.2333 0.0665 257.09 / 0.35)"></button>
 <hr class="divider" id="rule">
 <table><tbody id="rows"></tbody></table>
 <pre id="out"></pre>
@@ -92,6 +95,8 @@ setTimeout(() => {
     popBg: cs("pop").backgroundColor,
     sideBg: cs("side").backgroundColor,
     pillBg: cs("pill").backgroundColor,
+    tintPillBg: cs("tintPill").backgroundColor,
+    ringBtnBorder: cs("ringBtn").borderTopColor,
     orgCardEdge: cs("orgCard").boxShadow,
     orgLine: cs("orgLine").borderLeftColor,
     slowBg: cs("slow").backgroundColor,
