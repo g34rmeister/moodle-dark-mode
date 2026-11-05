@@ -60,6 +60,8 @@ const EXPECT = {
     stepBg: SURFACE_2,                   // a grey tab on a white card stays a step apart
     blueLink: "rgb(108, 172, 236)",      // link blue on the dark page is lightened
     bodyLink: "rgb(108, 172, 236)",      // also straight on <body>
+    fadeBg: "color(srgb 0.304 0.289647 0.336235)", // a 4 s fade to a pale tint is fixed as it starts
+    rafBoxFirstPaint: SURFACE,           // content added in a frame callback is dark before that paint
     tokBg: SURFACE, tokText: TEXT, tokBorder: BORDER, // Canvas Kit tokens redefined in workday.css
     tokMarks: "",                        // so the script had nothing to fix
     stripPopBg: SURFACE,                 // a white pop-up with a tiled strip image is darkened

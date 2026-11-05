@@ -30,6 +30,9 @@
   .hrow:hover { background: #f3eeff; }
   .grow a { color: rgb(102, 68, 153); }
   .grow:hover { background: #fdd023; }
+  /* A side-menu item that fades in a pale tint when selected (Workday, 4 s here) */
+  .fade { height: 30px; width: 200px; transition: background-color 4s linear; }
+  .fade.sel { background: #f6f0ff; }
   /* A box that animates every property, added after load: our recoloring must not fade */
   .slow { height: 20px; background: #fff; transition: all 3s linear; }
   /* Org chart: white cards edged only by a shadow, joined by near-black border lines */
@@ -78,6 +81,7 @@
 <a href="#" id="blueLink" style="color:#0875e1">Time Off</a>
 <div id="blueRow" style="background:#0065cc;color:#3b3b3b">PJ000022</div>
 <div id="blueChip" style="background:#007df6;color:#fff">is on</div>
+<div class="card" style="width:220px"><div class="fade" id="fade">Personal</div></div>
 <div class="bar" id="bar"><button>OK</button></div>
 </div>
 <div class="pop" id="pop">Unread</div>
@@ -92,6 +96,17 @@
 // by content.js, but reads white for a moment because of the transition.
 // The nav button reaches its settled state after the first scan
 setTimeout(() => document.getElementById("nav").classList.add("ready"), 400);
+setTimeout(() => document.getElementById("fade").classList.add("sel"), 700);
+// A light box added from inside a frame callback, after ours has run: a pre-paint
+// observer created after the extension's must already see it dark
+window.__lateSeen = "not run";
+setTimeout(() => {
+  const box = document.createElement("div"); box.id = "rafBox"; box.style.cssText = "width:60px;height:30px;background:#fff";
+  const probe = document.createElement("div"); probe.style.cssText = "position:fixed;left:-5px;width:1px;height:1px";
+  document.body.appendChild(probe);
+  new ResizeObserver(() => { if (box.isConnected) window.__lateSeen = getComputedStyle(box).backgroundColor; }).observe(probe);
+  requestAnimationFrame(() => requestAnimationFrame(() => { document.getElementById("page").appendChild(box); probe.style.width = "2px"; }));
+}, 900);
 setTimeout(() => {
   const slow = document.createElement("div");
   slow.className = "slow"; slow.id = "slow"; slow.textContent = "late box";
@@ -140,6 +155,8 @@ setTimeout(() => {
     lateText: cs("late").color,
     ruleBg: cs("rule").backgroundColor,
     logoTinted: cs("logo").filter !== "none",
+    fadeBg: cs("fade").backgroundColor,
+    rafBoxFirstPaint: window.__lateSeen,
   });
 }, 2000);
 </script></body></html>

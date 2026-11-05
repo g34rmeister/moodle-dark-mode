@@ -767,11 +767,33 @@ function flush() {
   pending = new Set();
   nodes.filter((n) => !nodes.some((o) => o !== n && o.contains(n))).forEach((n) => scan(n));
 }
+// Content added after our frame callback has run (Workday renders some of its
+// own in frame callbacks) would wait a frame and paint light once: the new nav on
+// every route change. A ResizeObserver callback runs later, after layout and just
+// before paint, so a probe we resize on each queue catches it in the same frame.
+// The probe lives in a shadow root, which our MutationObserver doesn't see.
+let probe = null;
+function lateHook() {
+  if (typeof ResizeObserver !== "function") return;
+  if (!probe) {
+    const host = document.createElement("lsu-dm-probe");
+    host.style.cssText = "position:fixed;left:-9px;top:0;width:1px;height:1px;overflow:hidden;pointer-events:none";
+    const box = document.createElement("div");
+    box.style.height = "1px";
+    host.attachShadow({ mode: "closed" }).appendChild(box);
+    new ResizeObserver(flush).observe(box);
+    probe = { host, box, wide: false };
+  }
+  if (!probe.host.isConnected) html().appendChild(probe.host);
+  probe.wide = !probe.wide;
+  probe.box.style.width = probe.wide ? "2px" : "1px";
+}
 function queue(node) {
   pending.add(node);
   if (scheduled) return;
   scheduled = true;
   requestAnimationFrame(flush);
+  lateHook();
   setTimeout(() => { if (document.visibilityState === "visible") flush(); }, 100);
 }
 
@@ -780,7 +802,7 @@ function handleMutations(mutations) {
     if (m.type === "childList") {
       // A new <html> (document.open/write in the editor iframe): put our classes back
       if (m.target === document) syncRootClasses();
-      m.addedNodes.forEach((n) => n.nodeType === 1 && queue(n));
+      m.addedNodes.forEach((n) => n.nodeType === 1 && n !== probe?.host && queue(n));
     } else if (m.target === html()) {
       // Our own flips are dropped in scan(); anything left is the page rewriting <html class>
       const cl = m.target.classList;
@@ -853,9 +875,14 @@ const recheck = (e) => {
 for (const type of ["mouseover", "mouseout", "focusin", "focusout"]) {
   document.addEventListener(type, recheck, { capture: true, passive: true });
 }
-document.addEventListener("transitionend", (e) => {
-  if (/color|background|^all$/.test(e.propertyName)) recheck(e);
-}, { capture: true, passive: true });
+// transitionrun fires as a color fade begins (Workday's selected menu item fades
+// in a pale tint): the re-check then reads where the fade is going (see fading)
+// and recolors before the next paint, instead of after the fade.
+for (const type of ["transitionrun", "transitionend"]) {
+  document.addEventListener(type, (e) => {
+    if (/color|background|^all$/.test(e.propertyName)) recheck(e);
+  }, { capture: true, passive: true });
+}
 
 document.addEventListener("DOMContentLoaded", () => { scan(document.body, { freeze: true }); syncThemeColor(); });
 window.addEventListener("load", () => scan(document.body, { freeze: true }));
