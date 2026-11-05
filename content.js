@@ -45,6 +45,8 @@ syncRootClasses();
 // and AMOLED palettes restyles everything we touched without rescanning.
 const PAGE = "var(--dm-bg)";
 const SURFACE = "var(--dm-surface)";
+const RAISED = "var(--dm-surface-2)"; // hover highlights
+const LINE = "var(--dm-muted)";       // drawn lines that were near-black
 const OVERLAY = "var(--dm-overlay)";
 const BORDER = "var(--dm-border)";
 // Contrast math assumes the lighter (dark, not AMOLED) page: if text passes there,
@@ -153,13 +155,18 @@ const SIDES = { t: "top", r: "right", b: "bottom", l: "left" };
 sheet.textContent =
   `html.lsu-dark [data-dm-bg="page"]${HI} { background-color: ${PAGE} !important; background-image: none !important; }\n` +
   `html.lsu-dark [data-dm-bg="solid"]${HI} { background-color: ${SURFACE} !important; background-image: none !important; }\n` +
+  `html.lsu-dark [data-dm-bg="hover"]${HI} { background-color: ${RAISED} !important; background-image: none !important; }\n` +
   `html.lsu-dark [data-dm-bg="overlay"]${HI} { background-color: ${OVERLAY} !important; }\n` +
   `html.lsu-dark [data-dm-bg="clear"]${HI} { background-color: transparent !important; background-image: none !important; }\n` +
   Object.entries(SIDES).map(([k, side]) =>
-    `html.lsu-dark [data-dm-bd~="${k}"]${HI} { border-${side}-color: ${BORDER} !important; }\n`).join("") +
+    `html.lsu-dark [data-dm-bd~="${k}"]${HI} { border-${side}-color: ${BORDER} !important; }\n` +
+    `html.lsu-dark [data-dm-bs~="${k}"]${HI} { border-${side}-color: ${LINE} !important; }\n`).join("") +
+  `html.lsu-dark [data-dm-edge]${HI} { box-shadow: 0 0 0 1px ${BORDER} !important; }\n` +
   // Used by full-page scans (see scan): cancels running transitions so computed
   // colors are final values, not mid-fade ones.
-  `html.lsu-dm-freeze *, html.lsu-dm-freeze *::before, html.lsu-dm-freeze *::after { transition: none !important; }\n`;
+  `html.lsu-dm-freeze *, html.lsu-dm-freeze *::before, html.lsu-dm-freeze *::after { transition: none !important; }\n` +
+  // Elements held while we change them (see holder)
+  `[data-dm-still]${HI}, [data-dm-still]${HI}::before, [data-dm-still]${HI}::after { transition: none !important; }\n`;
 
 function setInline(el, prop, value) {
   const saved = el.dataset.dmInline ? JSON.parse(el.dataset.dmInline) : {};
@@ -277,7 +284,11 @@ function resolveClear(els, bgPlans) {
     }
   } finally {
     root.classList.add("lsu-dark");
-    if (!wasFrozen) root.classList.remove("lsu-dm-freeze");
+    // Apply the dark styles again *before* unfreezing. Otherwise the browser sees
+    // every element go from the light values we just read to dark with transitions
+    // back on, and anything with `transition: all` (much of Workday) fades in from
+    // light: the page flashes whenever new content arrives.
+    if (!wasFrozen) { settleStyles(); root.classList.remove("lsu-dm-freeze"); }
   }
 }
 
@@ -287,34 +298,60 @@ function applyBg(el, kind) {
   } else if (kind === "clear") {
     setInline(el, "background-color", "transparent");
     setInline(el, "background-image", "none");
-  } else if (kind === "solid" || kind === "page") {
-    setInline(el, "background-color", kind === "page" ? PAGE : SURFACE);
+  } else if (kind === "solid" || kind === "page" || kind === "hover") {
+    setInline(el, "background-color", kind === "page" ? PAGE : kind === "hover" ? RAISED : SURFACE);
     setInline(el, "background-image", "none");
   } else {
     setInline(el, "background-color", OVERLAY);
   }
 }
 
-// Light-grey borders are subtle on white but glare on dark. Returns e.g. "t l".
-// Colored borders (LSU gold bars, red accents) are left alone.
+// Grey borders, two kinds. Light grey ones (`soft`) are subtle separators on white
+// but glare on dark: they get the border color. Near-black ones (`strong`) are
+// drawn lines, like the connectors in Workday's org chart (borders on empty spans),
+// which vanish on dark: they get the muted text color, so they stay lines. Our own
+// border colors are dark greys well above near-black, so they are never re-caught.
+// Colored borders (LSU gold bars, red accents) are left alone. Returns null or
+// { soft: "t l", strong: "b" } (either may be empty).
 function planBorders(el) {
   const cs = getComputedStyle(el);
-  const sides = Object.entries(SIDES).filter(([, side]) => {
-    if (parseFloat(cs[`border-${side}-width`]) === 0 || cs[`border-${side}-style`] === "none") return false;
+  const soft = [], strong = [];
+  // Sides we already recolored read as our colors now; judging them again would
+  // take our muted line for a light-grey border
+  const done = `${el.dataset.dmBd || ""} ${el.dataset.dmBs || ""}`.split(" ");
+  for (const [k, side] of Object.entries(SIDES)) {
+    if (done.includes(k) || el.dataset.dmInline?.includes(`"border-${side}-color"`)) continue;
+    if (parseFloat(cs[`border-${side}-width`]) === 0 || cs[`border-${side}-style`] === "none") continue;
     const c = parse(cs[`border-${side}-color`]);
-    if (!c || c.a < 0.2) return false;
+    if (!c) continue;
     const spread = Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b);
-    return luminance(c) > 0.35 && spread < 40;
-  });
-  return sides.length ? sides.map(([k]) => k).join(" ") : null;
+    if (spread >= 40) continue;
+    if (c.a >= 0.2 && luminance(c) > 0.35) soft.push(k);
+    else if (c.a >= 0.5 && luminance(c) < 0.01) strong.push(k);
+  }
+  return soft.length || strong.length ? { soft: soft.join(" "), strong: strong.join(" ") } : null;
 }
 
-function applyBorders(el, sides) {
+function applyBorders(el, { soft, strong }) {
   if (!el.hasAttribute("style")) {
-    el.dataset.dmBd = sides;
+    const add = (key, sides) => { if (sides) el.dataset[key] = `${el.dataset[key] || ""} ${sides}`.trim(); };
+    add("dmBd", soft);
+    add("dmBs", strong);
   } else {
-    sides.split(" ").forEach((k) => setInline(el, `border-${SIDES[k]}-color`, BORDER));
+    for (const [sides, color] of [[soft, BORDER], [strong, LINE]]) {
+      if (sides) sides.split(" ").forEach((k) => setInline(el, `border-${SIDES[k]}-color`, color));
+    }
   }
+}
+
+// A light box whose only edge is a shadow (Workday's org chart cards): the shadow
+// is invisible on dark, and on AMOLED black the darkened box is too. Such a box
+// gets a thin outline in the border color instead (data-dm-edge).
+function edgeOnlyByShadow(el) {
+  const cs = getComputedStyle(el);
+  if (cs.boxShadow === "none") return false;
+  return Object.values(SIDES).every((side) => parseFloat(cs[`border-${side}-width`]) === 0 ||
+    cs[`border-${side}-style`] === "none" || (parse(cs[`border-${side}-color`])?.a ?? 0) < 0.2);
 }
 
 // ---------- Pass 2: text contrast ----------
@@ -330,8 +367,9 @@ function hasOwnText(el) {
 // grid cells) animate background-color, so right after we darken a cell it still
 // reads white, and the text on it would be judged against white.
 const SURFACE_RGB = { r: 30, g: 27, b: 38, a: 1 };
-const OURS = { page: PAGE_BG, solid: SURFACE_RGB, overlay: PAGE_BG, clear: null,
-  [PAGE]: PAGE_BG, [SURFACE]: SURFACE_RGB, [OVERLAY]: PAGE_BG, transparent: null };
+const RAISED_RGB = { r: 40, g: 36, b: 50, a: 1 };
+const OURS = { page: PAGE_BG, solid: SURFACE_RGB, hover: RAISED_RGB, overlay: PAGE_BG, clear: null,
+  [PAGE]: PAGE_BG, [SURFACE]: SURFACE_RGB, [RAISED]: RAISED_RGB, [OVERLAY]: PAGE_BG, transparent: null };
 function ourBg(e) {
   if (e.dataset.dmBg) return OURS[e.dataset.dmBg];
   if (e.dataset.dmInline?.includes('"background-color"')) return OURS[e.style.getPropertyValue("background-color")];
@@ -375,16 +413,14 @@ function currentFix(el, prop) {
 // Workday's `.wd-icon-background { fill: none }` depends on the button's state, so
 // a scan in between sees black; trusting that forever turns outline icons into
 // solid blocks.
-function readPagePaints(shapes) {
+function readPagePaints(shapes, hold) {
   const own = new Map();
   if (!shapes.length) return own;
-  const root = html();
-  const wasFrozen = root.classList.contains("lsu-dm-freeze");
-  root.classList.add("lsu-dm-freeze");
   const undo = [];
   for (const el of shapes) {
     for (const prop of ["fill", "stroke"]) {
       const { id } = PAINTS[prop];
+      if (el.dataset[id] !== undefined || el.dataset.dmInline?.includes(`"${prop}"`)) hold(el);
       if (el.dataset[id] !== undefined) {
         const v = el.dataset[id];
         delete el.dataset[id];
@@ -406,9 +442,31 @@ function readPagePaints(shapes) {
     }
   } finally {
     undo.forEach((fn) => fn());
-    if (!wasFrozen) root.classList.remove("lsu-dm-freeze");
   }
   return own;
+}
+
+// Transitions off for just the elements we're about to change, until the browser has
+// applied the change (see settle). Without it, the page's own transitions animate
+// our recoloring: Workday has `transition: all` on rows and buttons, so a row we
+// darken would fade from white. Only these elements are held, so animations
+// elsewhere (a drawer sliding open) carry on.
+const STILL = "data-dm-still";
+function holder() {
+  const held = new Set();
+  return {
+    hold(el) { if (!held.has(el)) { held.add(el); el.setAttribute(STILL, ""); } },
+    settle() {
+      if (!held.size) return;
+      settleStyles();
+      held.forEach((el) => el.removeAttribute(STILL));
+    },
+  };
+}
+// Make the browser apply pending style changes now. All engines do this for the
+// whole document when any computed style is read.
+function settleStyles() {
+  getComputedStyle(html()).color;
 }
 
 // The element's own color for `prop`, as the page set it, or null if there is none
@@ -493,7 +551,7 @@ function scan(node, { freeze = false } = {}) {
   try {
     scanElements(node);
   } finally {
-    if (freeze) root.classList.remove("lsu-dm-freeze");
+    if (freeze) { settleStyles(); root.classList.remove("lsu-dm-freeze"); } // same reason as in resolveClear
     // Everything recorded since the call above is our own doing (inline overrides,
     // the class flips in resolveClear). Rescanning for those would only re-measure
     // elements we just fixed.
@@ -506,21 +564,46 @@ function scanElements(node) {
   const els = all.filter((el) => !SKIP.has(el.tagName) && !el.closest("svg"));
   // Icon shapes (<path>, <circle>, ...): only their fill and stroke are checked
   const shapes = all.filter((el) => el instanceof SVGGeometryElement);
-  // Read everything, then write, so the browser doesn't recalc styles per element.
-  const bgPlans = els.map(planBg);
-  resolveClear(els, bgPlans);
-  const bdPlans = els.map(planBorders);
-  els.forEach((el, i) => {
-    if (bgPlans[i]) applyBg(el, bgPlans[i]);
-    if (bdPlans[i]) applyBorders(el, bdPlans[i]);
-  });
-  const effectiveBg = makeBgFinder();
-  const own = readPagePaints(shapes);
-  const fgPlans = [
-    ...els.filter(hasOwnText).map((el) => planPaint(el, "color", effectiveBg)),
-    ...shapes.flatMap((el) => [planPaint(el, "fill", effectiveBg, own), planPaint(el, "stroke", effectiveBg, own)]),
-  ];
-  fgPlans.forEach((plan) => plan && applyPaint(plan));
+  const { hold, settle } = holder();
+  try {
+    // Backgrounds are re-judged on every scan: lift the ones we set, plan again from
+    // the page's own colors, and re-apply. A hover highlight we darkened (Workday's
+    // lavender menu rows) must go back to transparent once the pointer leaves.
+    const lifted = els.filter((el) => el.dataset.dmBg !== undefined || el.dataset.dmInline?.includes('"background-color"'));
+    for (const el of lifted) {
+      hold(el);
+      delete el.dataset.dmBg;
+      delete el.dataset.dmEdge;
+      unsetInline(el, "background-color");
+      unsetInline(el, "background-image");
+    }
+    // Read everything, then write, so the browser doesn't recalc styles per element.
+    const bgPlans = els.map(planBg);
+    // A light row that is light because it's hovered gets the raised color, so the
+    // highlight still shows. Decided before resolveClear: a hover color is often
+    // close to what's behind it (Workday's lavender on white), which would clear it.
+    // (Small boxes only: a whole card under the pointer at page load is a card.)
+    const hovered = els.map((el, i) => bgPlans[i] === "solid" && el.matches(":hover") && el.getBoundingClientRect().height <= 80);
+    resolveClear(els, bgPlans);
+    hovered.forEach((h, i) => { if (h) bgPlans[i] = "hover"; });
+    const edges = els.map((el, i) => bgPlans[i] === "solid" && edgeOnlyByShadow(el));
+    const bdPlans = els.map(planBorders);
+    els.forEach((el, i) => {
+      if (bgPlans[i] || bdPlans[i]) hold(el);
+      if (bgPlans[i]) applyBg(el, bgPlans[i]);
+      if (edges[i]) el.dataset.dmEdge = "";
+      if (bdPlans[i]) applyBorders(el, bdPlans[i]);
+    });
+    const effectiveBg = makeBgFinder();
+    const own = readPagePaints(shapes, hold);
+    const fgPlans = [
+      ...els.filter(hasOwnText).map((el) => planPaint(el, "color", effectiveBg)),
+      ...shapes.flatMap((el) => [planPaint(el, "fill", effectiveBg, own), planPaint(el, "stroke", effectiveBg, own)]),
+    ].filter(Boolean);
+    fgPlans.forEach((plan) => { hold(plan.el); applyPaint(plan); });
+  } finally {
+    settle();
+  }
 }
 
 function restoreAll() {
@@ -538,20 +621,26 @@ function restoreAll() {
     document.querySelectorAll(`[${attr}], [${srcAttr}]`).forEach((el) => { delete el.dataset[id]; delete el.dataset[src]; });
   }
   document.querySelectorAll("[data-dm-bd]").forEach((el) => delete el.dataset.dmBd);
+  document.querySelectorAll("[data-dm-bs]").forEach((el) => delete el.dataset.dmBs);
+  document.querySelectorAll("[data-dm-edge]").forEach((el) => delete el.dataset.dmEdge);
 }
 
-// Batch DOM changes (AJAX content, drawers opening, hover states) into one scan.
+// Batch DOM changes (AJAX content, drawers opening, hover states) into one scan per
+// frame, run just before the browser paints it, so new content never shows up
+// light first (Workday renders grid rows as you scroll). A hidden tab gets no
+// frames; its scans wait until it's shown.
 let pending = new Set();
-let timer = 0;
+let scheduled = false;
 function queue(node) {
   pending.add(node);
-  if (timer) return;
-  timer = setTimeout(() => {
-    timer = 0;
+  if (scheduled) return;
+  scheduled = true;
+  requestAnimationFrame(() => {
+    scheduled = false;
     const nodes = [...pending].filter((n) => n.isConnected);
     pending = new Set();
     nodes.filter((n) => !nodes.some((o) => o !== n && o.contains(n))).forEach((n) => scan(n));
-  }, 50);
+  });
 }
 
 function handleMutations(mutations) {
@@ -611,6 +700,23 @@ function applySettings(settings) {
 
 // Auto mode: follow the OS switching between light and dark (e.g. at sunset)
 systemDark.addEventListener("change", update);
+
+// :hover and :focus restyle a page without changing its DOM, so the observer never
+// hears about them: myLSU's link rows turn gold on hover, and the light text we gave
+// them for the dark row would stay on the gold. Re-check the row under the pointer
+// or focus as it changes (the parent too, for siblings in the same row), and again
+// when a color transition ends, since rows that fade read mid-fade at first.
+// Each is queued, so a fast mouse costs one scan of a small subtree per 50 ms.
+const recheck = (e) => {
+  const t = e.target;
+  if (t.nodeType === 1 && t !== document.body && t !== html()) queue(t.parentElement || t);
+};
+for (const type of ["mouseover", "mouseout", "focusin", "focusout"]) {
+  document.addEventListener(type, recheck, { capture: true, passive: true });
+}
+document.addEventListener("transitionend", (e) => {
+  if (/color|background|^all$/.test(e.propertyName)) recheck(e);
+}, { capture: true, passive: true });
 
 document.addEventListener("DOMContentLoaded", () => { scan(document.body, { freeze: true }); syncThemeColor(); });
 window.addEventListener("load", () => scan(document.body, { freeze: true }));

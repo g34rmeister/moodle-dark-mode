@@ -61,6 +61,9 @@ const EXPECT = {
     ringFill: "rgb(0, 0, 0)",            // invisible fill (fill-opacity 0) is left alone
     barBg: SURFACE,                      // fixed bar matching the page stays opaque
     popBg: SURFACE,                      // so does a pop-up menu
+    orgCardEdge: `${BORDER} 0px 0px 0px 1px`, // shadow-only card gets an outline
+    orgLine: MUTED,                      // near-black connector line stays a visible line
+    slowBg: SURFACE,                     // recolored at once, not faded from white over 3 s
     suggBg: SURFACE,                     // and a panel inside a floating wrapper
     lateText: TEXT,                      // text in a cell that was still fading out
     ruleBg: BORDER,                      // workday.css
@@ -124,6 +127,33 @@ function startServer() {
   return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve(server)));
 }
 
+// ---------- Hover (Playwright engines): :hover changes no DOM, so content.js listens ----------
+const HOVER_EXPECT = {
+  rowBefore: "rgba(0, 0, 0, 0)", rowText: TEXT,
+  rowHovered: SURFACE_2, rowTextHovered: TEXT,   // light highlight -> raised color, text stays light
+  goldTextHovered: "rgb(102, 68, 153)",          // gold highlight kept, text back to its own purple
+  rowAfter: "rgba(0, 0, 0, 0)", goldTextAfter: "rgb(180, 160, 204)", // purple lightened to 7:1 on the page
+};
+async function checkHover(engine, page) {
+  await page.goto(pageUrl("lsu/workday.html"));
+  await waitResult(() => page.locator("#out").textContent());
+  const read = () => page.evaluate(() => {
+    const cs = (id) => getComputedStyle(document.getElementById(id));
+    return { row: cs("hrow").backgroundColor, text: cs("htext").color, gold: cs("gtext").color };
+  });
+  const before = await read();
+  await page.hover("#hrow"); await sleep(500);
+  const onRow = await read();
+  await page.hover("#grow"); await sleep(500);
+  const onGold = await read();
+  await page.mouse.move(600, 380); await sleep(500); // empty part of the page
+  const after = await read();
+  check(engine, "hover", {
+    rowBefore: before.row, rowText: before.text, rowHovered: onRow.row, rowTextHovered: onRow.text,
+    goldTextHovered: onGold.gold, rowAfter: after.row, goldTextAfter: after.gold,
+  }, HOVER_EXPECT);
+}
+
 // ---------- Chromium: the extension ----------
 async function testChromium(port) {
   if (!existsSync(join(DIST.chrome, "manifest.json"))) return skipOrFail("chromium", "dist/build/chrome missing (run python build.py)");
@@ -141,6 +171,9 @@ async function testChromium(port) {
       check("chromium", name, await waitResult(() => page.locator("#out").textContent()), EXPECT[name]);
       await page.close();
     }
+    const hp = await ctx.newPage();
+    await checkHover("chromium", hp);
+    await hp.close();
   } finally {
     await ctx.close();
     rmSync(profile, { recursive: true, force: true });
@@ -219,6 +252,10 @@ async function testWebKit() {
       check("webkit", name, await waitResult(() => page.locator("#out").textContent()), EXPECT[name]);
       await page.close();
     }
+
+    const hp = await ctx.newPage();
+    await checkHover("webkit", hp);
+    await hp.close();
 
     // No userscript-menu API here, as in the iOS Userscripts app: the floating button stands in
     const page = await ctx.newPage();
