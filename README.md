@@ -25,20 +25,20 @@ A dark mode for [LSU Moodle](https://moodle.lsu.edu) (Snap theme), [LSU Workday]
 | Safari (macOS, iOS, iPadOS) | The userscript, with the free **Userscripts** app |
 | Chrome on Android or iOS, other mobile browsers | The userscript, with a userscript manager |
 
-Run `python build.py` to make the builds: `dist/build/chrome/` and `dist/build/firefox/` (unpacked folders for testing) plus a store zip for each.
+Ready-made downloads (the Chrome zip, the Firefox zip and the userscript) are on the [Releases page](https://github.com/g34rmeister/moodle-dark-mode/releases). To build them yourself, run `python build.py`: it makes `dist/build/chrome/` and `dist/build/firefox/` (unpacked folders for testing) plus a store zip for each.
 
 ## Install: Chrome, Edge, Brave, Opera, Vivaldi
 
-1. Download or clone this repo.
+1. Download `lsu-moodle-dark-<version>-chrome.zip` from [Releases](https://github.com/g34rmeister/moodle-dark-mode/releases) and unzip it (or download or clone this repo).
 2. Open the extensions page (`chrome://extensions`, `edge://extensions`, `brave://extensions`, ...) and turn on **Developer mode**.
-3. Click **Load unpacked** and select this folder (or `dist/build/chrome/`).
+3. Click **Load unpacked** and select the unzipped folder (or this repo's folder, or `dist/build/chrome/`).
 4. Refresh Moodle, Workday or myLSU. Use the toolbar popup to set **Dark mode** (Off, On or Auto) and **AMOLED black**.
 
 After changing any file, click the reload icon on the extension's card, then refresh the site.
 
 ## Install: Firefox
 
-- **To try it:** open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on** and pick `dist/build/firefox/manifest.json`. It stays until Firefox restarts.
+- **To try it:** open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on** and pick `lsu-moodle-dark-<version>-firefox.zip` from [Releases](https://github.com/g34rmeister/moodle-dark-mode/releases) (or `dist/build/firefox/manifest.json`). It stays until Firefox restarts.
 - **To keep it:** Firefox only installs signed add-ons permanently. Upload `dist/lsu-moodle-dark-<version>-firefox.zip` to [addons.mozilla.org](https://addons.mozilla.org/developers/), either listed (public, and installable on Firefox for Android) or unlisted (you get a signed `.xpi` to install yourself). `npx web-ext sign --channel=unlisted` does the unlisted route from the command line, using AMO API keys.
 - Needs Firefox 140 or later (Firefox for Android 142). If the theme doesn't apply, open the add-on's **Permissions** tab in `about:addons` and make sure access to `moodle.lsu.edu`, `myworkday.com` and `mylsu.apps.lsu.edu` is on (Firefox asks for each site separately).
 
@@ -71,6 +71,8 @@ All versions need a browser from 2023 or later (CSS nesting: Chrome 120, Firefox
 | `store/` | Chrome Web Store screenshots, promo tile, `make_store_images.py`, and [`STORE_LISTING.md`](store/STORE_LISTING.md) with the dashboard text |
 
 After editing a `.css` file or `content.js`, run `python build.py` (Python 3.10+). It regenerates the userscript and the store packages (`dist/lsu-moodle-dark-<version>-chrome.zip` and `-firefox.zip`, git-ignored). A GitHub Action lints the Firefox build, fails if the committed userscript doesn't match the sources, and runs the browser tests.
+
+To publish a release, set `version` in `manifest.json`, run `python build.py`, commit, then tag and push the tag: `git tag v1.3.0 && git push origin v1.3.0`. The release workflow ([`.github/workflows/release.yml`](.github/workflows/release.yml)) checks that the tag matches the manifest, builds, lints the Firefox package, and creates a GitHub Release with both zips and the userscript attached.
 
 To run the browser tests locally (Node 18+; Firefox 140+ and `geckodriver` for the Firefox part):
 

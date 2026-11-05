@@ -1,0 +1,48 @@
+name: release
+
+# Push a version tag (git tag v1.3.0 && git push origin v1.3.0) to publish a GitHub
+# Release with the store packages and the userscript attached. The tag must match
+# "version" in manifest.json.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # create the release and upload its files
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tag must match the manifest version
+        run: |
+          version=$(python -c "import json; print(json.load(open('manifest.json'))['version'])")
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match manifest.json version ${version} (expected v${version})"
+            exit 1
+          fi
+      - name: Build
+        run: python build.py
+      - name: Lint the Firefox build
+        run: npx --yes web-ext@10.8.0 lint --source-dir dist/build/firefox --self-hosted=false
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: LSU Dark Mode ${{ github.ref_name }}
+          generate_release_notes: true
+          body: |
+            **Downloads**
+            - `lsu-moodle-dark-*-chrome.zip`: Chrome, Edge, Brave, Opera, Vivaldi. Unzip it, open `chrome://extensions`, turn on Developer mode, click **Load unpacked** and pick the unzipped folder. (This is also the file for the Chrome Web Store.)
+            - `lsu-moodle-dark-*-firefox.zip`: Firefox. Firefox only installs signed add-ons for good; to try it, open `about:debugging#/runtime/this-firefox` and load this zip as a temporary add-on.
+            - `lsu-moodle-dark.user.js`: Safari and mobile browsers, with a userscript manager.
+
+            Unofficial student project, not affiliated with Louisiana State University.
+          files: |
+            dist/lsu-moodle-dark-*-chrome.zip
+            dist/lsu-moodle-dark-*-firefox.zip
+            dist/lsu-moodle-dark.user.js
+          fail_on_unmatched_files: true
