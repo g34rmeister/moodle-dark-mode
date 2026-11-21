@@ -183,7 +183,8 @@ sheet.textContent =
   Object.entries(SIDES).map(([k, side]) =>
     `html.lsu-dark [data-dm-bd~="${k}"]${HI} { border-${side}-color: ${BORDER} !important; }\n` +
     `html.lsu-dark [data-dm-bs~="${k}"]${HI} { border-${side}-color: ${LINE} !important; }\n` +
-    `html.lsu-dark [data-dm-bm~="${k}"]${HI} { border-${side}-color: ${FAINT} !important; }\n`).join("") +
+    `html.lsu-dark [data-dm-bm~="${k}"]${HI} { border-${side}-color: ${FAINT} !important; }\n` +
+    `html.lsu-dark [data-dm-bx~="${k}"]${HI} { border-${side}-color: transparent !important; }\n`).join("") +
   Object.entries({ soft: BORDER, strong: LINE, faint: FAINT }).map(([k, color]) =>
     `html.lsu-dark [data-dm-ol="${k}"]${HI} { outline-color: ${color} !important; }\n`).join("") +
   `html.lsu-dark [data-dm-edge]${HI} { box-shadow: 0 0 0 1px ${BORDER} !important; }\n` +
@@ -357,11 +358,16 @@ function floats(el) {
   return cs.position === "absolute" && (cs.boxShadow !== "none" || parseInt(cs.zIndex, 10) > 0);
 }
 
+// Light boxes the same color as what's behind them (in light mode, while hovered if
+// they are): invisible there, so not a hover highlight either (see scanElements)
+const invisibleOnLight = new WeakSet();
+
 function decideClear(els, bgPlans, i, own, behind, planOf) {
   const el = els[i];
-  if (!own || !behind) return;
+  if (!own || !behind) { invisibleOnLight.delete(el); return; }
   const mix = (k) => own[k] * own.a + behind[k] * (1 - own.a); // composite over parent
   const diff = Math.abs(mix("r") - behind.r) + Math.abs(mix("g") - behind.g) + Math.abs(mix("b") - behind.b);
+  if (diff < 3) invisibleOnLight.add(el); else invisibleOnLight.delete(el);
   if (diff < 24) { if (!behind.floating && !floats(el)) bgPlans[i] = "clear"; }
   else if (bgPlans[i] === "solid" && behind.canvas && isPageBackground(el)) bgPlans[i] = "page";
   // A lighter box on a light box we darken (myLSU's white search pill on its
@@ -458,29 +464,45 @@ function applyBg(el, kind) {
 // drawn lines, like the connectors in Workday's org chart (borders on empty spans),
 // which vanish on dark: they get the muted text color, so they stay lines. Our own
 // border colors are dark greys well above near-black, so they are never re-caught.
-// Colored borders (LSU gold bars, red accents) are left alone. Returns null or
-// { soft: "t l", strong: "b", faint: "" } (any may be empty).
+// Colored borders (LSU gold bars, red accents) are left alone. A border the same
+// color as the background it is drawn on (`spacer`) was invisible in light mode: it is
+// spacing, not a line (the Reveille's menu items have 8px white borders on white), so
+// it goes transparent; drawing it in the border color would frame every item.
+// Returns null or { soft: "t l", strong: "b", faint: "", spacer: "" } (any may be empty).
 // Translucent dark borders (`faint`; Workday's outlined inputs and round icon
 // buttons, navy at 35%) are mid-grey lines on white. They get light at 35%, which
 // keeps them as visible as in light mode; the border color would be dimmer.
 function planBorders(el) {
   const cs = getComputedStyle(el);
-  const soft = [], strong = [], faint = [];
+  const soft = [], strong = [], faint = [], spacer = [];
   // Sides we already recolored read as our colors now; judging them again would
   // take our muted line for a light-grey border
-  const done = `${el.dataset.dmBd || ""} ${el.dataset.dmBs || ""} ${el.dataset.dmBm || ""}`.split(" ");
+  const done = `${el.dataset.dmBd || ""} ${el.dataset.dmBs || ""} ${el.dataset.dmBm || ""} ${el.dataset.dmBx || ""}`.split(" ");
+  // The light-mode color the border is drawn on: the box's own background (our
+  // background overrides are lifted while borders are planned), else what's behind it
+  let under;
+  const lightUnder = () => {
+    if (under === undefined) {
+      const own = parse(cs.backgroundColor);
+      under = own && own.a >= 0.95 ? own : lightBgBehind(el, false) || null;
+    }
+    return under;
+  };
   for (const [k, side] of Object.entries(SIDES)) {
     if (done.includes(k) || el.dataset.dmInline?.includes(`"border-${side}-color"`)) continue;
     if (parseFloat(cs[`border-${side}-width`]) === 0 || cs[`border-${side}-style`] === "none") continue;
-    const kind = lineKind(parse(cs[`border-${side}-color`]));
-    if (kind) ({ soft, strong, faint })[kind].push(k);
+    const c = parse(cs[`border-${side}-color`]);
+    const kind = lineKind(c);
+    if (kind === "soft" && c.a >= 0.95 && lightUnder() &&
+      Math.abs(c.r - under.r) + Math.abs(c.g - under.g) + Math.abs(c.b - under.b) < 6) spacer.push(k);
+    else if (kind) ({ soft, strong, faint })[kind].push(k);
   }
   // Workday draws its card edges as an outline (light grey, 0.8px), not a border
   let outline = null;
   if (cs.outlineStyle !== "none" && parseFloat(cs.outlineWidth) > 0 && !el.dataset.dmOl &&
     !el.dataset.dmInline?.includes('"outline-color"')) outline = lineKind(parse(cs.outlineColor));
-  return soft.length || strong.length || faint.length || outline ?
-    { soft: soft.join(" "), strong: strong.join(" "), faint: faint.join(" "), outline } : null;
+  return soft.length || strong.length || faint.length || spacer.length || outline ?
+    { soft: soft.join(" "), strong: strong.join(" "), faint: faint.join(" "), spacer: spacer.join(" "), outline } : null;
 }
 
 // How a grey line drawn for white should look on dark: "soft" (the border color),
@@ -506,7 +528,7 @@ function lineKind(c) {
 }
 const LINE_COLORS = { soft: BORDER, strong: LINE, faint: FAINT };
 
-function applyBorders(el, { soft, strong, faint, outline }) {
+function applyBorders(el, { soft, strong, faint, spacer, outline }) {
   if (outline) {
     if (!el.hasAttribute("style")) el.dataset.dmOl = outline;
     else setInline(el, "outline-color", LINE_COLORS[outline]);
@@ -516,8 +538,9 @@ function applyBorders(el, { soft, strong, faint, outline }) {
     add("dmBd", soft);
     add("dmBs", strong);
     add("dmBm", faint);
+    add("dmBx", spacer);
   } else {
-    for (const [sides, color] of [[soft, BORDER], [strong, LINE], [faint, FAINT]]) {
+    for (const [sides, color] of [[soft, BORDER], [strong, LINE], [faint, FAINT], [spacer, "transparent"]]) {
       if (sides) sides.split(" ").forEach((k) => setInline(el, `border-${SIDES[k]}-color`, color));
     }
   }
@@ -794,7 +817,10 @@ function scanElements(node) {
     const hovered = els.map((el, i) => (bgPlans[i] === "solid" || (bgPlans[i] === "accent" && paleTint(el))) &&
       el.matches(":hover") && el.getBoundingClientRect().height <= 80);
     resolveClear(els, bgPlans);
-    hovered.forEach((h, i) => { if (h) bgPlans[i] = "hover"; });
+    // ...but only if hovering shows: a white box on white (the Reveille's menu strip
+    // and its items) is the same color hovered or not, so it is no highlight, and
+    // raising it would put a lighter patch under the pointer wherever it went.
+    hovered.forEach((h, i) => { if (h && !invisibleOnLight.has(els[i])) bgPlans[i] = "hover"; });
     const edges = els.map((el, i) => ["solid", "raised"].includes(bgPlans[i]) && edgeOnlyByShadow(el));
     const bdPlans = els.map(planBorders);
     els.forEach((el, i) => {
@@ -832,6 +858,7 @@ function restoreAll() {
   document.querySelectorAll("[data-dm-bd]").forEach((el) => delete el.dataset.dmBd);
   document.querySelectorAll("[data-dm-bs]").forEach((el) => delete el.dataset.dmBs);
   document.querySelectorAll("[data-dm-bm]").forEach((el) => delete el.dataset.dmBm);
+  document.querySelectorAll("[data-dm-bx]").forEach((el) => delete el.dataset.dmBx);
   document.querySelectorAll("[data-dm-ol]").forEach((el) => delete el.dataset.dmOl);
   document.querySelectorAll("[data-dm-edge]").forEach((el) => delete el.dataset.dmEdge);
   document.querySelectorAll("[data-dm-ac]").forEach((el) => delete el.dataset.dmAc);

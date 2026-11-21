@@ -12,21 +12,37 @@ html.lsu-dark {
      #fullwrap's white top and bottom borders are spacing, so they go see-through. */
   #fullwrap { border-color: transparent !important; }
 
-  /* Header rows carry an inline `background: #fff` (not !important, so this wins).
-     Darkening them here rather than leaving them to content.js matters for the menu
-     row: its scroll-to-fixed script restores a saved style attribute when it pins
-     the row, which would undo an inline override and leave the pinned menu
-     see-through. Not every .sno-designer-area-row: the footer row is LSU gold. */
-  .sno-header-wrap .sno-designer-area-row { background-color: var(--dm-bg) !important; }
-  .sno-header-wrap .sno-header-row-stick { background-color: var(--dm-surface) !important; }
-  /* The masthead row's 10px white borders are spacing (white on white), not lines:
-     make them see-through so the row's own color shows. (Not var(--dm-bg): on AMOLED
-     that is black, which content.js takes for a drawn black line and lightens.)
-     The menu row's purple borders are real, so it's left out. */
-  .sno-header-wrap .sno-designer-area-row:not(.sno-header-row-stick) { border-color: transparent !important; }
-  /* Boxes inside the header rows are white or clear in light mode: the white ones
-     (behind the wordmark) would otherwise get the raised card color */
-  .sno-header-wrap .sno-hac-inner { background-color: transparent !important; }
+  /* White header rows: the site sets each row's color in its style attribute, white
+     on the Reveille but LSU purple for The Mag's menu bar (lsureveille.com/the-mag/),
+     which stays purple. So only rows set to white are matched, and they get the page
+     color, as in light mode where they are white on the white page.
+     They are darkened here (an inline `background` without !important loses to
+     this) rather than left to content.js because of the menu row: its scroll-to-fixed
+     script restores a saved style attribute when it pins the row, which would undo
+     an inline override and leave the pinned menu see-through. The pinned row also
+     keeps the width the window had when it was pinned; in a wider window the strips
+     past its ends show the page, so a raised color on the row would look like a
+     shadow at both ends. */
+  .sno-header-wrap .sno-designer-area-row:is([style*="background: #fff" i], [style*="background:#fff" i],
+    [style*="background: rgb(255, 255, 255)"], [style*="background-color: rgb(255, 255, 255)"]) {
+    background-color: var(--dm-bg) !important;
+
+    /* The masthead row's 10px white borders are spacing (white on white), not lines:
+       see-through, so the row's own color shows. (Not var(--dm-bg): on AMOLED that
+       is black, which content.js takes for a drawn black line and lightens.)
+       The menu row's purple borders are real. */
+    &:not(.sno-header-row-stick) { border-color: transparent !important; }
+
+    /* Everything painted inside them is white on white too (the box behind the
+       wordmark, the menu strip, its items, the search button): clear it all, or
+       content.js gives each layer the raised card color, since it can't see that
+       this row was white (the rule above darkened it) and judges the first white
+       box inside as a card on dark. Dropdowns are left to content.js: they float
+       over the page, so they keep the card color. */
+    & :is(.sno-hac-inner, .sno-hac-menuwrap, .sf-menu > li, .sno-hac-search-icon) {
+      background-color: transparent !important;
+    }
+  }
 
   /* The REVEILLE wordmark is purple with a gold shadow: brighten the purple
      enough to read on dark while keeping the two-tone look. */
@@ -40,4 +56,8 @@ html.lsu-dark {
      itself hovered has no highlight, so its text turns gold instead. */
   .sf-menu li:hover > a { color: var(--dm-link-hov) !important; }
   .sno-hac-menuwrap .sf-menu a:is(:hover, :focus) { color: var(--dm-bg) !important; }
+
+  /* Text selection: the site's `::selection` is light blue and keeps the text
+     color, so light text would be selected light on light */
+  ::selection { background-color: var(--dm-primary) !important; color: #fff !important; }
 }
