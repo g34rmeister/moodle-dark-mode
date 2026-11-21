@@ -2,8 +2,15 @@
    base.css, loaded first; content.js handles most of the page. */
 html.lsu-dark {
 
-  /* Page wrapper: white in light mode, around everything */
-  #wrap { background-color: var(--dm-bg) !important; }
+  /* The page is white wrappers nested in white wrappers (#wrap > #fullwrap >
+     .innerbackgroundwrap > .postarea ...). Their backgrounds are left to content.js
+     on purpose: it takes the full-window #wrap for the page and clears every white
+     box inside it, so the page is one tone. Darkening a wrapper here instead would
+     hide its light-mode white from content.js, and the white box inside would
+     look like a card on a dark page and get the raised color: a patch a shade off
+     the page, with text flush to its edge.
+     #fullwrap's white top and bottom borders are spacing, so they go see-through. */
+  #fullwrap { border-color: transparent !important; }
 
   /* Header rows carry an inline `background: #fff` (not !important, so this wins).
      Darkening them here rather than leaving them to content.js matters for the menu
@@ -27,5 +34,10 @@ html.lsu-dark {
 
   /* Main menu: LSU purple text on white in light mode */
   .sf-menu a, .sno-menu-more a { color: var(--dm-text) !important; }
-  .sf-menu a:hover, .sf-menu li:hover > a { color: var(--dm-link-hov) !important; }
+  /* The link under the pointer (or focused) gets the site's own gold highlight
+     (`.sno-hac-menuwrap a:hover`, white text in light mode, which is hard to read
+     on gold): give it dark text. A parent whose dropdown is open but that isn't
+     itself hovered has no highlight, so its text turns gold instead. */
+  .sf-menu li:hover > a { color: var(--dm-link-hov) !important; }
+  .sno-hac-menuwrap .sf-menu a:is(:hover, :focus) { color: var(--dm-bg) !important; }
 }
