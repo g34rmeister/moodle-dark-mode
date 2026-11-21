@@ -1,5 +1,5 @@
 // keep in sync with content.js
-const DEFAULTS = { enabled: true, auto: false, amoled: false, siteMoodle: true, siteWorkday: true, siteMylsu: true };
+const DEFAULTS = { enabled: true, auto: false, amoled: false, siteMoodle: true, siteWorkday: true, siteMylsu: true, siteReveille: true };
 const modes = document.querySelectorAll('input[name="mode"]');
 const autoNote = document.getElementById("auto-note");
 const amoled = document.getElementById("amoled");

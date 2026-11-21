@@ -1,5 +1,5 @@
 /* Shared by every site: the palette, the page base and scrollbars. Each site's own
-   stylesheet (moodle.css, workday.css, mylsu.css) is loaded after this one.
+   stylesheet (moodle.css, workday.css, mylsu.css, reveille.css) is loaded after this one.
    All rules are nested under html.lsu-dark so the popup toggle can switch them off. */
 html.lsu-dark {
 

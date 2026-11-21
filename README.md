@@ -1,6 +1,6 @@
 # LSU Dark Mode
 
-A dark mode for [LSU Moodle](https://moodle.lsu.edu) (Snap theme), [LSU Workday](https://workday.lsu.edu) and the [myLSU portal](https://mylsu.apps.lsu.edu), with LSU purple and gold accents. It comes as a browser extension for Chrome-family browsers and Firefox (desktop and Android), and as a userscript for Safari and other mobile browsers.
+A dark mode for [LSU Moodle](https://moodle.lsu.edu) (Snap theme), [LSU Workday](https://workday.lsu.edu) the [myLSU portal](https://mylsu.apps.lsu.edu) and [The Reveille](https://lsureveille.com), LSU's student newspaper, with LSU purple and gold accents. It comes as a browser extension for Chrome-family browsers and Firefox (desktop and Android), and as a userscript for Safari and other mobile browsers.
 
 > Unofficial student project, not affiliated with or endorsed by Louisiana State University. It only changes how these sites look in your own browser. It sends no data anywhere and stores just your on/off, AMOLED and per-site settings.
 
@@ -8,7 +8,8 @@ A dark mode for [LSU Moodle](https://moodle.lsu.edu) (Snap theme), [LSU Workday]
 
 - Moodle: dark theme for pages, cards, drawers, menus, forms, tables, messaging, forums, quizzes, the calendar and the TinyMCE text editor
 - Workday and myLSU: home pages, menus, data grids, buttons and icons, with the LSU wordmark in gold
-- One setting for all three sites
+- The Reveille: front page, sections and articles, with the REVEILLE wordmark brightened and the gold footer kept gold
+- One setting for all four sites
 - **Auto mode:** follows your system's light/dark setting, so the sites switch when your OS does
 - **AMOLED mode:** a true-black page, so pixels switch off on OLED phone and laptop screens
 - LSU-gold logo, gold keyboard-focus ring and gold "Highlighted" section tag
@@ -32,7 +33,7 @@ Ready-made downloads (the Chrome zip, the Firefox zip and the userscript) are on
 1. Download `lsu-moodle-dark-<version>-chrome.zip` from [Releases](https://github.com/g34rmeister/moodle-dark-mode/releases) and unzip it (or download or clone this repo).
 2. Open the extensions page (`chrome://extensions`, `edge://extensions`, `brave://extensions`, ...) and turn on **Developer mode**.
 3. Click **Load unpacked** and select the unzipped folder (or this repo's folder, or `dist/build/chrome/`).
-4. Refresh Moodle, Workday or myLSU. Use the toolbar popup to set **Dark mode** (Off, On or Auto) and **AMOLED black**. If one site misbehaves, switch just that site off under **Sites**.
+4. Refresh Moodle, Workday, myLSU or the Reveille. Use the toolbar popup to set **Dark mode** (Off, On or Auto) and **AMOLED black**. If one site misbehaves, switch just that site off under **Sites**.
 
 After changing any file, click the reload icon on the extension's card, then refresh the site.
 
@@ -62,7 +63,7 @@ All versions need a browser from 2023 or later (CSS nesting: Chrome 120, Firefox
 | File | Purpose |
 | --- | --- |
 | `base.css` | Shared by all sites: the palette (CSS variables; `html.lsu-amoled` swaps in the true-black set), page base, placeholders, scrollbars. All rules are nested under `html.lsu-dark` so the toggle can switch them off |
-| `moodle.css`, `workday.css`, `mylsu.css` | Each site's own rules, loaded after `base.css`. The manifest has one content-script entry per site |
+| `moodle.css`, `workday.css`, `mylsu.css`, `reveille.css` | Each site's own rules, loaded after `base.css`. The manifest has one content-script entry per site |
 | `content.js` | Adds the `lsu-dark` class at `document_start` (no white flash), then scans computed styles to fix leftover light backgrounds, borders, low-contrast text and SVG icons, including content the site loads later |
 | `popup.html` / `popup.js` | Toolbar toggles, saved in `chrome.storage.sync`. `content.js` also keeps a copy in the site's localStorage, read synchronously at page start so the page never flashes the wrong theme |
 | `build.py` | Builds the Chromium and Firefox packages (the Firefox one adds its add-on ID and data-consent settings to the manifest), and generates `dist/lsu-moodle-dark.user.js` from the stylesheets + `content.js` (it picks the site's stylesheet from the page URL), with a shim that replaces `chrome.storage` (localStorage) and the popup (menu commands or a floating button) |
@@ -104,6 +105,11 @@ Notes on Workday and myLSU:
 - Scans run just before the next paint (`requestAnimationFrame`), so new content never shows light first. Elements being recolored have their transitions switched off until the change is applied, and the whole-page light-mode reads are settled before unfreezing; otherwise sites with `transition: all` (Workday) fade every recolored element in from light.
 - Near-black borders are drawn lines (Workday's org chart connectors are borders on empty spans), so they become the muted text color rather than vanishing. A light box whose only edge is a shadow (the org chart cards) gets a thin outline, since shadows don't show on dark.
 - myLSU's Quick Links icons are purple PNGs, some on a baked-in white tile, so `mylsu.css` brightens them (as `moodle.css` does for LSU's purple icons) rather than inverting them.
+
+Notes on the Reveille (WordPress, SNO's FLEX theme):
+
+- The header rows have an inline `background: #fff`. `reveille.css` darkens them with `!important` instead of leaving them to `content.js`, because the menu row's scroll-to-fixed script restores a saved `style` attribute each time it pins the row, which would undo an inline override and leave the pinned menu see-through.
+- The masthead row's 10px white borders are spacing, not lines, so `reveille.css` makes them transparent. Painting them the page color would not work in AMOLED: black reads as a drawn line to `content.js`, which lightens it.
 
 ## Reporting issues
 

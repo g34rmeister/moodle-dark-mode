@@ -1,7 +1,8 @@
 // Settings: `enabled` is the master switch; `auto` makes it follow the system's
 // light/dark preference; `amoled` picks the true-black palette. `siteMoodle`,
-// `siteWorkday` and `siteMylsu` turn it off on one site only (if a page there breaks).
-const DEFAULTS = { enabled: true, auto: false, amoled: false, siteMoodle: true, siteWorkday: true, siteMylsu: true };
+// `siteWorkday`, `siteMylsu` and `siteReveille` turn it off on one site only (if a
+// page there breaks).
+const DEFAULTS = { enabled: true, auto: false, amoled: false, siteMoodle: true, siteWorkday: true, siteMylsu: true, siteReveille: true };
 
 // Which of those sites this is. self.origin, not location: an about:blank frame (the
 // editor's iframe) has an empty location but inherits its parent's origin.
@@ -11,6 +12,7 @@ const SITE_KEY = (() => {
   if (!host) host = location.hostname;
   if (/(^|\.)myworkday\.com$/.test(host)) return "siteWorkday";
   if (host === "mylsu.apps.lsu.edu") return "siteMylsu";
+  if (host === "lsureveille.com" || host === "www.lsureveille.com") return "siteReveille";
   return "siteMoodle";
 })();
 
