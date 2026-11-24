@@ -46,6 +46,10 @@
   /* myLSU: a white search pill on a light grey sidebar */
   .side { width: 200px; padding: 8px; background: #e6e6e6; }
   .pill { height: 20px; border-radius: 10px; background: #fff; }
+  /* myLSU's sidebar rows: light grey on the white sidebar (which has a style
+     attribute, so it is darkened inline), purple on hover */
+  .srow { height: 30px; background: #eee; transition: all 0.15s; }
+  .srow:hover { background: rgb(70, 29, 124); }
   .bar { position: fixed; left: 0; right: 0; bottom: 0; height: 40px; background: oklch(0.9692 0.0035 248.23); }
 </style></head>
 <body>
@@ -87,6 +91,9 @@
 <div class="card" id="trnCard" style="width:200px"><div class="trn" id="trn">Receipts</div></div>
 <div id="hatch" style="width:200px;height:60px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%23f0f1f2'/%3E%3Cpath d='M0 8L8 0' stroke='%23e0e2e4'/%3E%3C/svg%3E&quot;)"><span id="hatchText" style="color:#2b2b2b">Hours Worked</span></div>
 <div class="card" style="width:240px"><div id="iconRow" style="height:29px;padding-left:24px;background:oklch(0.969 0.0155 248.07) url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Crect width='12' height='12' fill='%23666'/%3E%3C/svg%3E&quot;) no-repeat 4px center;color:#2b2b2b">Additional Data</div></div>
+<!-- Each row in its own wrapper, like myLSU's <li class="panel">: the re-check after the
+     pointer leaves a row covers the wrapper, not the sidebar -->
+<div id="sbar" style="width:200px;height:200px;background:#fff"><div><div class="srow" id="srow1">Campus Community</div></div><div><div class="srow" id="srow2">Financial Services</div></div></div>
 <div class="bar" id="bar"><button>OK</button></div>
 </div>
 <div class="pop" id="pop">Unread</div>

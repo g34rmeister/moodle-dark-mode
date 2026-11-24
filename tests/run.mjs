@@ -160,6 +160,9 @@ const HOVER_EXPECT = {
   purpleHovered: "rgb(70, 29, 124)",             // a dark hover color is the page's own
   purpleSoonAfter: SURFACE,                      // fading back to light: dark again at once
   rowAfter: "rgba(0, 0, 0, 0)", goldTextAfter: "rgb(180, 160, 204)", // purple lightened to 7:1 on the page
+  // myLSU's sidebar: a row the pointer crossed matches the others (it was a shade
+  // darker: the re-check after the pointer left missed the sidebar's inline plan)
+  sideRowCrossed: SURFACE_2, sideRowOther: SURFACE_2,
 };
 async function checkHover(engine, page) {
   await page.goto(pageUrl("lsu/workday.html"));
@@ -179,10 +182,16 @@ async function checkHover(engine, page) {
   const purpleSoonAfter = await page.evaluate(() => getComputedStyle(document.getElementById("prow")).backgroundColor);
   await page.mouse.move(600, 380); await sleep(500); // empty part of the page
   const after = await read();
+  // Leave for the pop-up (outside the page wrapper): the re-checks then cover the
+  // row's wrapper and the pop-up, but not the sidebar. (Leaving for an empty spot
+  // re-checks this small page whole, sidebar included, which hid the bug.)
+  await page.hover("#srow1"); await sleep(500);
+  await page.hover("#pop"); await sleep(800);
+  const side = await page.evaluate(() => ["srow1", "srow2"].map((id) => getComputedStyle(document.getElementById(id)).backgroundColor));
   check(engine, "hover", {
     rowBefore: before.row, rowText: before.text, rowHovered: onRow.row, rowTextHovered: onRow.text,
     goldTextHovered: onGold.gold, rowAfter: after.row, goldTextAfter: after.gold,
-    purpleHovered, purpleSoonAfter,
+    purpleHovered, purpleSoonAfter, sideRowCrossed: side[0], sideRowOther: side[1],
   }, HOVER_EXPECT);
 }
 

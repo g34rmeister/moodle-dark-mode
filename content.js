@@ -362,6 +362,18 @@ function floats(el) {
 // they are): invisible there, so not a hover highlight either (see scanElements)
 const invisibleOnLight = new WeakSet();
 
+// The background plan an earlier scan gave an element through an inline override
+// (elements with a style attribute get those instead of data-dm-bg), read back from
+// the color it set. Without it, a scan of just a row (the pointer leaving it) saw no
+// plan on myLSU's sidebar, which has a style attribute, and gave the row the card
+// color, while a scan of the whole sidebar raised it: rows the pointer had crossed
+// ended up a shade darker than the rest.
+function inlinePlan(e) {
+  if (!e.dataset.dmInline?.includes('"background-color"')) return undefined;
+  const v = e.style.getPropertyValue("background-color");
+  return v === SURFACE ? "solid" : v === RAISED ? "raised" : v === PAGE ? "page" : v === "transparent" ? "clear" : undefined;
+}
+
 function decideClear(els, bgPlans, i, own, behind, planOf) {
   const el = els[i];
   if (!own || !behind) { invisibleOnLight.delete(el); return; }
@@ -391,7 +403,7 @@ function resolveClear(els, bgPlans) {
   // The plan for an ancestor: from this scan (ancestors come first in `els`, so it is
   // final already) or from an earlier one
   const index = new Map(els.map((el, i) => [el, i]));
-  const planOf = (e) => (index.has(e) ? bgPlans[index.get(e)] : e.dataset.dmBg);
+  const planOf = (e) => (index.has(e) ? bgPlans[index.get(e)] : e.dataset.dmBg ?? inlinePlan(e));
   // Planned boxes are light, so their computed color (our override lifted) is their
   // light one already. If every background behind them is remembered, decide without
   // switching dark mode off (the usual case for hover re-checks).
